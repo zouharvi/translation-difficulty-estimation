@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools >= 65.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["difficulty_sampling"]
+
+[project]
+name = "difficulty-sampling"
+version = "0.0.0"
+requires-python = ">=3.11"
+authors = []
+dependencies = [
+  "numpy",
+  "pandas",
+  "sacrebleu",
+  "datasets",
+  "scikit-learn",
+  "tqdm",
+  "matplotlib",
+  "requests",
+  "sentence-transformers",
+  "unbabel_comet",
+  "subset2evaluate >= 0.1.0",
+]
+classifiers = [
+  # prevents upload to PyPi
+  "Private :: Do Not Upload"
+]
+
+[project.urls]
+Repository = "https://github.com/zouharvi/difficulty-sampling"
+
+# pip install -e .
