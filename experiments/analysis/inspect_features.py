@@ -3,6 +3,7 @@ from typing import List, Dict, Union
 import logging
 import argparse
 import pickle
+import scipy.stats
 
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -188,7 +189,11 @@ class Features:
         fig, ax = plt.subplots(figsize=(6, 4), dpi=72)
 
         scatter = ax.scatter(
-            x, y, alpha=0.6, edgecolors="w", linewidth=0.5, rasterized=True
+            x, y, alpha=0.6,
+            edgecolors="w",
+            s=10,
+            linewidth=0,
+            rasterized=True,
         )
 
         ax.grid(True, linestyle="--", alpha=0.6)
@@ -198,10 +203,23 @@ class Features:
 
         ax.plot(x, line, color="r")
 
+        corr_pearson = scipy.stats.pearsonr(x, y)[0]
+        corr_spearman = scipy.stats.spearmanr(x, y)[0]
+        plt.text(
+            0.95,
+            0.05,
+            f"Pearson: {corr_pearson:.1%}\nSpearman: {corr_spearman:.1%}".replace("%", r"\%"),
+            transform=ax.transAxes,
+            fontsize=12,
+            verticalalignment="bottom",
+            horizontalalignment="right",
+            bbox=dict(facecolor="white", alpha=0.8),
+        )
+
         ax.set_xlabel(feature, fontsize=16)
         ax.set_ylabel(f"{protocol} score", fontsize=16)
 
-        fig.tight_layout()
+        fig.tight_layout(pad=0)
 
         plt_name = f"{protocol}.png"
         plt.savefig(datadir / plt_name, format="png", dpi=300)
