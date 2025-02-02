@@ -4,6 +4,7 @@ import logging
 import argparse
 import pickle
 import scipy.stats
+import subset2evaluate.select_subset
 
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -122,7 +123,7 @@ class Features:
         4) Plot the feature using the plot_feature method
     """
 
-    available_features = ["src_length", "src_NE_count"]
+    available_features = ["src_length", "src_NE_count", "cometsrc_avg", "cometsrc_diversity"]
 
     def __init__(self, data: Data):
         self.data = data
@@ -143,7 +144,6 @@ class Features:
                     sample["scores"][system]["src_length"] = len(sample["src"])
 
         elif feature == "src_NE_count":
-
             ner_savedir = Path("dumps/ner_counts")
             if not ner_savedir.exists():
                 ner_savedir.mkdir(parents=True)
@@ -158,6 +158,25 @@ class Features:
                 assert sample["i"] == counts[idx]["segment"]
                 for system in sample["scores"]:
                     sample["scores"][system][feature] = counts[idx]["count"]
+
+        elif feature == "cometsrc_avg":
+            data_new = subset2evaluate.select_subset.basic(method="cometsrc_avg", data=self.data.data)
+            data_new = {
+                sample["i"]: sample["subset2evaluate_utility"] for sample in data_new
+            }
+            for sample in self.data.data:
+                for system in sample["scores"]:
+                    sample["scores"][system]["cometsrc_avg"] = data_new[sample["i"]]
+
+        elif feature == "cometsrc_diversity":
+            data_new = subset2evaluate.select_subset.basic(method="cometsrc_diversity", data=self.data.data)
+            data_new = {
+                sample["i"]: sample["subset2evaluate_utility"] for sample in data_new
+            }
+            for sample in self.data.data:
+                for system in sample["scores"]:
+                    sample["scores"][system]["cometsrc_diversity"] = data_new[sample["i"]]
+
 
     def plot_feature(self, feature: str):
         """

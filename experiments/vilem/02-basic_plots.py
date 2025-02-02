@@ -27,7 +27,7 @@ data_y3 = np.array([np.average([v["human"]  for v in l["scores"].values()]) for 
 plt.hist(
     [data_y1, data_y2, data_y3],
     density=True,
-    bins=np.arange(20, 100, 10),
+    bins=np.arange(0, 100+20, 20),
     label=["All", "Selected 50%", "Selected 25%"],
 )
 
@@ -37,8 +37,6 @@ plt.show()
 
 # %%
 
-
-
 data_y1 = np.array([np.average([v["human"]  for v in l["scores"].values()]) for l in data])
 len_flat = len(data_y1)
 data_y2 = np.array([np.average([v["human"]  for v in l["scores"].values()]) for l in data_y_all["cometsrc_avg"]][:int(len_flat*0.50)])
@@ -47,10 +45,32 @@ data_y3 = np.array([np.average([v["human"]  for v in l["scores"].values()]) for 
 plt.hist(
     [data_y1, data_y2, data_y3],
     density=True,
-    bins=np.arange(20, 100, 10),
+    bins=np.arange(0, 100+20, 20),
     label=["All", "Selected 50%", "Selected 25%"],
 )
 
 plt.legend()
 plt.title("Selection with COMETsrc - avg")
+plt.show()
+
+# %%
+import copy
+
+data_y_all["src_len"] = copy.deepcopy(data)
+data_y_all["src_len"].sort(key=lambda x: len(x["src"].split()), reverse=True)
+
+data_y1 = np.array([np.average([v["human"]  for v in l["scores"].values()]) for l in data])
+len_flat = len(data_y1)
+data_y2 = np.array([np.average([v["human"]  for v in l["scores"].values()]) for l in data_y_all["src_len"]][:int(len_flat*0.50)])
+data_y3 = np.array([np.average([v["human"]  for v in l["scores"].values()]) for l in data_y_all["src_len"]][:int(len_flat*0.25)])
+
+plt.hist(
+    [data_y1, data_y2, data_y3],
+    density=True,
+    bins=np.arange(0, 100+20, 20),
+    label=["All", "Selected 50%", "Selected 25%"],
+)
+
+plt.legend()
+plt.title("Selection with SRC length")
 plt.show()
