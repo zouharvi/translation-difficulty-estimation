@@ -23,6 +23,7 @@ dependencies = [
   "unbabel_comet",
   "subset2evaluate >= 0.1.0",
   "gliner",
+  "wordfreq",
 ]
 classifiers = [
   # prevents upload to PyPi
