@@ -84,7 +84,8 @@ def read_arguments() -> ArgumentParser:
         "--granularity",
         choices=["segment", "document"],
         default="segment",
-        help="What to consider as a single 'item' in the analysis. Allowed values: 'segment', 'document'. "
+        help="What to consider as a single 'item' in the analysis. If MQM analysis is conducted, this argument will be "
+        "ignored, and such analysis will be with respect to segments. Allowed values: 'segment', 'document'. "
         "Default: 'segment'.",
     )
 

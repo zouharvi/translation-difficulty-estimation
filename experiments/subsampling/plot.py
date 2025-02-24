@@ -22,20 +22,20 @@ def plot_human_scores_hist(
     data_y1 = np.array(
         [
             np.average([v["human"] for v in l["scores"].values()])
-            for l in scored_data.data
+            for l in scored_data.src_data_list
         ]
     )
     len_flat = len(data_y1)
     data_y2 = np.array(
         [
             np.average([v["human"] for v in l["scores"].values()])
-            for l in scored_data.data
+            for l in scored_data.src_data_list
         ][: int(len_flat * 0.50)]
     )
     data_y3 = np.array(
         [
             np.average([v["human"] for v in l["scores"].values()])
-            for l in scored_data.data
+            for l in scored_data.src_data_list
         ][: int(len_flat * 0.25)]
     )
 

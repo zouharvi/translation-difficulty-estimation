@@ -1,4 +1,5 @@
 import logging
+from argparse import Namespace
 from pathlib import Path
 
 import sentinel_metric
@@ -70,11 +71,16 @@ def sentinel_src_metric_model_score(
     return data
 
 
-def subsample_with_sentinel_src(args) -> Data:
+def subsample_with_sentinel_src(args: Namespace) -> Data:
     """
     Command to subsample WMT data using the scores returned by a sentinel-src metric.
-    """
 
+    Args:
+        args (Namespace): Arguments parsed from the command line.
+
+    Returns:
+        scored_data (Data): Data with sentinel-src scores added.
+    """
     scored_data = sentinel_src_metric_model_score(
         get_sentinel_src_metric_model(args.sentinel_src_metric_model),
         Data.load(

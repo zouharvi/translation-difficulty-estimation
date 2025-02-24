@@ -1,3 +1,5 @@
+from argparse import Namespace
+
 from difficulty_sampling.data import Data
 
 
@@ -46,11 +48,16 @@ def word_frequency_score(
     return data
 
 
-def subsample_with_word_frequency(args) -> Data:
+def subsample_with_word_frequency(args: Namespace) -> Data:
     """
-    Command to subsample WMT data using the frequency of words in the source sentences
-    """
+    Command to subsample WMT data using the frequency of words in the source sentences.
 
+    Args:
+        args (Namespace): Arguments parsed from the command line.
+
+    Returns:
+        scored_data (Data): Data with word frequency scores added.
+    """
     scored_data = word_frequency_score(
         Data.load(
             dataset_name=args.dataset_name,

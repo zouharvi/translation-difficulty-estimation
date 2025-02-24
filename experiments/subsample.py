@@ -1,5 +1,5 @@
 from typing import Dict
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 import numpy as np
@@ -7,6 +7,7 @@ import numpy as np
 from difficulty_sampling.data import SrcData
 from subsampling.sentinel import subsample_with_sentinel_src
 from subsampling.word_frequency import subsample_with_word_frequency
+from subsampling.syntactic_complexity import subsample_with_syntactic_complexity
 from subsampling.plot import plot_human_scores_hist
 
 
@@ -66,9 +67,24 @@ def read_arguments() -> ArgumentParser:
     parser.add_argument(
         "--scorer-name",
         type=str,
+        choices=[
+            "sentinel-src-mqm",
+            "sentinel-src-da",
+            "word_frequency",
+            "word_zipf_frequency",
+            "syntactic_complexity",
+        ],
         default="sentinel-src-mqm",
-        help="Which name to use to identify the sentinel-src metric model used for the subsampling (it will be used in "
-        "the output plot and for the output path where to save it). Default: 'sentinel-src-mqm'.",
+        help="Which name to use to identify the scorer used. Allowed values: 'sentinel-src-mqm', 'sentinel-src-da', "
+        "'word_frequency', 'word_zipf_frequency', 'syntactic_complexity'. Default: 'sentinel-src-mqm'.",
+    )
+
+    parser.add_argument(
+        "--syntactic-model-name",
+        type=str,
+        default="en_core_web_sm",
+        help="Which spaCy Dependency Parsing model to use for Syntactic Structure Complexity subsampling. "
+        "Default: 'en_core_web_sm'.",
     )
 
     parser.add_argument(
@@ -97,12 +113,14 @@ def get_src_score(src_data: SrcData, scorer_name: str) -> float:
 
 
 def subsample_command() -> None:
-    args = read_arguments().parse_args()
+    args: Namespace = read_arguments().parse_args()
 
     if args.scorer_name in {"sentinel-src-mqm", "sentinel-src-da"}:
         command = subsample_with_sentinel_src
     elif args.scorer_name in {"word_frequency", "word_zipf_frequency"}:
         command = subsample_with_word_frequency
+    elif args.scorer_name == "syntactic_complexity":
+        command = subsample_with_syntactic_complexity
     else:
         raise ValueError(f"Scorer name '{args.scorer_name}' not recognized.")
 
