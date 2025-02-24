@@ -1,11 +1,7 @@
 import logging
-from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict, Union, List
 
-import numpy as np
 import sentinel_metric
-from matplotlib import pyplot as plt
 
 from difficulty_sampling.data import Data
 
@@ -60,21 +56,21 @@ def sentinel_src_metric_model_score(
     Returns:
         scored_data (Data): Input data with "sentinel_src" as additional available score for each MT system.
     """
-    sources = [{"src": sample["src"]} for sample in data.data]
+    sources = [{"src": sample["src"]} for sample in data.src_data_list]
     scores = sentinel_src_metric_model.predict(
         sources, batch_size=batch_size, gpus=1
     ).scores
 
-    assert len(scores) == len(data.data)
+    assert len(scores) == len(data.src_data_list)
 
-    for idx, sample in enumerate(data.data):
+    for idx, sample in enumerate(data.src_data_list):
         for system in sample["scores"]:
             sample["scores"][system][scorer_name] = scores[idx]
 
     return data
 
 
-def subsample_with_sentinel_src(args) -> None:
+def subsample_with_sentinel_src(args) -> Data:
     """
     Command to subsample WMT data using the scores returned by a sentinel-src metric.
     """

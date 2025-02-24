@@ -1,5 +1,3 @@
-import numpy as np
-
 from difficulty_sampling.data import Data
 
 
@@ -21,7 +19,7 @@ def word_frequency_score(
     from wordfreq import word_frequency, zipf_frequency, tokenize
 
     print("Counting frequencies for source language: ", data.lp.split("-")[0])
-    sources = [{"src": sample["src"]} for sample in data.data]
+    sources = [{"src": sample["src"]} for sample in data.src_data_list]
 
     scores = []
     for source_elem in sources:
@@ -39,16 +37,16 @@ def word_frequency_score(
             raise ValueError(f"Scorer name '{scorer_name}' not recognized.")
         scores.append(avg_freq)
 
-    assert len(scores) == len(data.data)
+    assert len(scores) == len(data.src_data_list)
 
-    for idx, sample in enumerate(data.data):
+    for idx, sample in enumerate(data.src_data_list):
         for system in sample["scores"]:
             sample["scores"][system][scorer_name] = scores[idx]
 
     return data
 
 
-def subsample_with_word_frequency(args) -> None:
+def subsample_with_word_frequency(args) -> Data:
     """
     Command to subsample WMT data using the frequency of words in the source sentences
     """

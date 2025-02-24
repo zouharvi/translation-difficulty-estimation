@@ -1,20 +1,33 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, TypedDict
 import logging
 
 from difficulty_sampling import wmt24_from_en_lps, wmt24_from_en_lps_mqm
 from difficulty_sampling.utils import load_data_wmt
 
 
+class SrcData(TypedDict, total=False):
+    i: int
+    src: str
+    ref: str
+    tgt: Dict[str, str]  # System translations.
+    cost: float
+    domain: str
+    doc: str
+    scores: Dict[
+        str, Dict[str, float]
+    ]  # Segment-level scores given by metrics to systems.
+
+
 class Data:
     def __init__(
         self,
-        data: List[Dict],
+        src_data_list: List[SrcData],
         dataset_name: str,
         lp: str,
         protocol: str,
         domains: str,
     ):
-        self.data = data
+        self.src_data_list = src_data_list
 
         self.dataset_name = dataset_name
         self.lp = lp

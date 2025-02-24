@@ -1,12 +1,10 @@
-import logging
-from typing import Dict, List, Union
+from typing import Dict
 from argparse import ArgumentParser
 from pathlib import Path
 
-from matplotlib import pyplot as plt
 import numpy as np
 
-from difficulty_sampling.data import Data
+from difficulty_sampling.data import SrcData
 from subsampling.sentinel import subsample_with_sentinel_src
 from subsampling.word_frequency import subsample_with_word_frequency
 from subsampling.plot import plot_human_scores_hist
@@ -14,7 +12,7 @@ from subsampling.plot import plot_human_scores_hist
 
 def read_arguments() -> ArgumentParser:
     parser = ArgumentParser(
-        description="Command to subsample WMT data using the scores returned by a sentinel-src metric model."
+        description="Command to subsample WMT data using the outputs returned by a given scoring method."
     )
 
     parser.add_argument(
@@ -83,26 +81,22 @@ def read_arguments() -> ArgumentParser:
     return parser
 
 
-def get_src_score(
-    src_data: Dict[
-        str, Union[int, str, Dict[str, str], float, Dict[str, Dict[str, float]]]
-    ],
-    scorer_name: str,
-) -> float:
+def get_src_score(src_data: SrcData, scorer_name: str) -> float:
     """
     Return the score assigned by the input scorer to the src data.
 
     Args:
-        src_data (Dict): Dictionary containing all the data for a given src segment.
+        src_data (SrcData): SrcData Dictionary containing all the info for a given src segment.
         scorer_name (str): Name of the scorer to use to extract the score from the data.
 
     Returns:
         score (float): Score assigned by the input scorer to the src data.
     """
-    return src_data["scores"][next(iter(src_data["scores"]))][scorer_name]
+    scores: Dict[str, Dict[str, float]] = src_data["scores"]  # More explicit typing
+    return scores[next(iter(scores))][scorer_name]
 
 
-if __name__ == "__main__":
+def subsample_command() -> None:
     args = read_arguments().parse_args()
 
     if args.scorer_name in {"sentinel-src-mqm", "sentinel-src-da"}:
@@ -115,7 +109,9 @@ if __name__ == "__main__":
     data = command(args)
 
     # Sort the src data in ascending order in terms of the scorer output
-    data.data.sort(key=lambda src_data: get_src_score(src_data, args.scorer_name))
+    data.src_data_list.sort(
+        key=lambda src_data: get_src_score(src_data, args.scorer_name)
+    )
 
     plot_human_scores_hist(
         data,
@@ -127,3 +123,7 @@ if __name__ == "__main__":
         ),
         args.out_plot_path,
     )
+
+
+if __name__ == "__main__":
+    subsample_command()

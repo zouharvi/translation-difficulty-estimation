@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Dict, Union
+from typing import List
 import logging
 import argparse
 import pickle
@@ -7,15 +7,16 @@ import scipy.stats
 import subset2evaluate.select_subset
 
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 from tqdm import tqdm
 
 import numpy as np
 from scipy.stats import linregress
 
-import difficulty_sampling
+from difficulty_sampling.data import Data
+
 
 logging.basicConfig(level=logging.INFO)
+
 
 plt.rcParams["text.usetex"] = True
 
@@ -57,59 +58,6 @@ def src_NER(
     return counts
 
 
-class Data:
-    def __init__(
-        self,
-        data: List[Dict],
-        dataset_name: str,
-        lp: str,
-        protocol: str,
-        domains: str,
-    ):
-
-        self.data = data
-
-        self.dataset_name = dataset_name
-        self.lp = lp
-        self.protocol = protocol
-        self.domains = domains
-
-    @classmethod
-    def load(
-        cls,
-        dataset_name: str,
-        lp: str,
-        protocol: str,
-        domains: Union[str, List[str]] = "all",
-    ):
-        """
-        Load the data for the given dataset, language pair, protocol and domains
-
-        Args:
-            dataset_name (str): Name of the dataset (e.g. wmt24, wmt23, ...)
-            lp (str): Language pair (e.g., en-es, en-de, ...)
-            protocol (str): Protocol used for evaluation (e.g., esa, mqm, ...)
-            domains (Union[str, List[str]], optional): List of domains to analyze (e.g., ['news']). Defaults to "all".
-        """
-
-        logging.info(
-            f"Loading dataset: {dataset_name}\tLanguage pair: {lp}\tProtocol: {protocol}"
-        )
-        data = difficulty_sampling.utils.load_data_wmt(
-            year=dataset_name, langs=lp, normalize=False, file_protocol=protocol
-        )
-
-        logging.info("Num segments: {}".format(len(data)))
-
-        if domains != "all":
-            logging.info(f"Filtering data to the domains: {domains}")
-
-            data = [sample for sample in data if sample["domain"] in domains]
-            domains = "_".join(sorted(domains))
-
-        return cls(data, dataset_name, lp, protocol, domains)
-
-
 class Features:
     """
     Class to measure and report the relationship between features of the data and human scores
@@ -146,7 +94,7 @@ class Features:
             raise (ValueError(f"Feature {feature} not available"))
 
         if feature == "src_length":
-            for sample in self.data.data:
+            for sample in self.data.src_data_list:
                 for system in sample["scores"]:
                     sample["scores"][system]["src_length"] = len(sample["src"])
 
@@ -160,31 +108,31 @@ class Features:
                 / f"ner_counts.{self.data.dataset_name}.{self.data.lp}.{self.data.domains}.pkl"
             )
 
-            counts = src_NER(self.data.data, filepath=filepath)
-            for idx, sample in enumerate(self.data.data):
+            counts = src_NER(self.data.src_data_list, filepath=filepath)
+            for idx, sample in enumerate(self.data.src_data_list):
                 assert sample["i"] == counts[idx]["segment"]
                 for system in sample["scores"]:
                     sample["scores"][system][feature] = counts[idx]["count"]
 
         elif feature == "cometsrc_avg":
             data_new = subset2evaluate.select_subset.basic(
-                method="cometsrc_avg", data=self.data.data
+                method="cometsrc_avg", data=self.data.src_data_list
             )
             data_new = {
                 sample["i"]: sample["subset2evaluate_utility"] for sample in data_new
             }
-            for sample in self.data.data:
+            for sample in self.data.src_data_list:
                 for system in sample["scores"]:
                     sample["scores"][system]["cometsrc_avg"] = data_new[sample["i"]]
 
         elif feature == "cometsrc_diversity":
             data_new = subset2evaluate.select_subset.basic(
-                method="cometsrc_diversity", data=self.data.data
+                method="cometsrc_diversity", data=self.data.src_data_list
             )
             data_new = {
                 sample["i"]: sample["subset2evaluate_utility"] for sample in data_new
             }
-            for sample in self.data.data:
+            for sample in self.data.src_data_list:
                 for system in sample["scores"]:
                     sample["scores"][system]["cometsrc_diversity"] = data_new[
                         sample["i"]
@@ -198,12 +146,12 @@ class Features:
             model_path = download_model("sapienzanlp/sentinel-src-mqm")
             model = load_from_checkpoint(model_path)
 
-            sources = [{"src": sample["src"]} for sample in self.data.data]
+            sources = [{"src": sample["src"]} for sample in self.data.src_data_list]
             scores = model.predict(sources, batch_size=32, gpus=1).scores
 
-            assert len(scores) == len(self.data.data)
+            assert len(scores) == len(self.data.src_data_list)
 
-            for idx, sample in enumerate(self.data.data):
+            for idx, sample in enumerate(self.data.src_data_list):
                 for system in sample["scores"]:
                     sample["scores"][system]["sentinel_src"] = scores[idx]
 
@@ -242,7 +190,7 @@ class Features:
                 which should have been previously computed and added to the score of each system, for each translation
         """
 
-        data = self.data.data
+        data = self.data.src_data_list
         protocol = self.data.protocol
         datadir = self.savedir / feature
 
@@ -323,7 +271,6 @@ class Features:
 
 
 if __name__ == "__main__":
-
     argparser = argparse.ArgumentParser()
 
     argparser.add_argument(
