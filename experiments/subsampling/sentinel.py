@@ -57,7 +57,9 @@ def sentinel_src_metric_model_score(
     Returns:
         scored_data (Data): Input data with "sentinel_src" as additional available score for each MT system.
     """
-    sources = [{"src": sample["src"]} for sample in data.src_data_list]
+    sources = [
+        {"src": sample["src"], "lp": sample["lp"]} for sample in data.src_data_list
+    ]
     scores = sentinel_src_metric_model.predict(
         sources, batch_size=batch_size, gpus=1
     ).scores

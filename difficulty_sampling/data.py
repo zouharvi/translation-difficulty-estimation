@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, TypedDict
+from typing import Dict, List, Union, TypedDict, Optional
 import logging
 
 from difficulty_sampling import wmt24_from_en_lps, wmt24_from_en_lps_mqm
@@ -16,6 +16,7 @@ class SrcData(TypedDict, total=False):
     scores: Dict[
         str, Dict[str, float]
     ]  # Segment-level scores given by metrics to systems.
+    lp: Optional[str]  # Language pair.
 
 
 class Data:
@@ -58,13 +59,19 @@ class Data:
             data = []
             lps = wmt24_from_en_lps if protocol == "esa" else wmt24_from_en_lps_mqm
             for lp in lps:
-                data += load_data_wmt(
-                    year="wmt24", langs=lp, normalize=False, file_protocol=protocol
-                )
+                data += [
+                    {**src_data, "lp": lp}
+                    for src_data in load_data_wmt(
+                        year="wmt24", langs=lp, normalize=False, file_protocol=protocol
+                    )
+                ]
         else:
-            data = load_data_wmt(
-                year=dataset_name, langs=lp, normalize=False, file_protocol=protocol
-            )
+            data = [
+                {**src_data, "lp": lp}
+                for src_data in load_data_wmt(
+                    year=dataset_name, langs=lp, normalize=False, file_protocol=protocol
+                )
+            ]
 
         logging.info("Num segments before domain filtering: {}".format(len(data)))
 
