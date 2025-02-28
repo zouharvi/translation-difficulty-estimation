@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter, defaultdict
 
-from typing import Dict, List, Union, TypedDict, Optional
+from typing import Dict, List, Union, TypedDict, Optional, Literal
 
 from difficulty_sampling import wmt24_from_en_lps_mqm
 
@@ -87,6 +87,24 @@ def read_arguments() -> ArgumentParser:
         help="What to consider as a single 'item' in the analysis. If MQM analysis is conducted, this argument will be "
         "ignored, and such analysis will be with respect to segments. Allowed values: 'segment', 'document'. "
         "Default: 'segment'.",
+    )
+
+    parser.add_argument(
+        "--threshold-type",
+        type=str,
+        choices=["spans", "scores"],
+        default="spans",
+        help="Threshold type to use. If 'spans', the threshold will be applied to the number of error spans. "
+        "If 'scores', the threshold will be applied to the scores. It is used only for ESA segment-level analysis. "
+        "Allowed values: 'spans', 'scores'. Default: 'spans'.",
+    )
+
+    parser.add_argument(
+        "--domains",
+        type=str,
+        nargs="+",
+        default="all",
+        help="Domains to be analyzed. If not specified, all domains are considered ('all'). Default: 'all'.",
     )
 
     return parser
@@ -225,13 +243,21 @@ def analyze_segments_condition(
     doc_id2sys_translations: Dict[str, Dict[str, Dict[str, List[EsaAnnotation]]]],
     easy_systems_threshold: float = 0.8,
     hard_systems_threshold: float = 0.8,
+    threshold_type: Literal["spans", "scores"] = "spans",
 ) -> Dict[str, Dict[str, Dict[int, Dict[str, Union[Dict[str, str], str]]]]]:
     """
     Groups annotations by document, language pair, and line_id.
     For each segment (identified by line_id), each system's annotation is classified as follows:
+
+    If threshold_type is 'spans':
       - 'hard' if the annotation contains any major error or 5 or more minor errors.
       - 'easy' if it contains no major errors and at most one minor error.
       - 'mixed' if it contains no major errors and the number of minor errors is greater than 1 and less than 5.
+    Instead, if threshold_type is 'scores':
+      - 'hard' if the ESA score < 33.
+      - 'easy' if the ESA score >= 66.
+      - 'mixed' otherwise.
+
     Then, for each segment, the overall classification is:
       - 'EASY' if >= easy_systems_threshold classify it as easy,
       - 'HARD' if >= hard_systems_threshold classify it as hard,
@@ -241,10 +267,16 @@ def analyze_segments_condition(
         doc_id2sys_translations: Dictionary containing wmt24 human annotations.
         easy_systems_threshold: Proportion of systems that need to classify a segment as easy for 'EASY' seg class.
         hard_systems_threshold: Proportion of systems that need to classify a segment as hard for 'HARD' seg class.
+        threshold_type: 'spans' => thresholding on the num of error spans, 'scores' => on the output ESA human scores.
 
     Returns:
         Dict: Dictionary containing segment-level classification results.
     """
+    if threshold_type != "spans" and threshold_type != "scores":
+        raise ValueError(
+            f"Invalid threshold type: {threshold_type}! Allowed values: 'spans', 'scores'."
+        )
+
     analysis_seg_res = dict()
     for doc_id, lp_dict in doc_id2sys_translations.items():
         analysis_seg_res[doc_id] = dict()
@@ -261,24 +293,34 @@ def analyze_segments_condition(
             for line_id, annotations in line_id_groups.items():
                 system_classification = dict()
                 for system, annotation in annotations:
-                    esa_spans = annotation["esa_spans"]
-                    major_errors = sum(
-                        1 for span in esa_spans if span["severity"] == "major"
-                    )
-                    minor_errors = sum(
-                        1 for span in esa_spans if span["severity"] == "minor"
-                    )
+                    if threshold_type == "spans":
+                        esa_spans = annotation["esa_spans"]
+                        major_errors = sum(
+                            1 for span in esa_spans if span["severity"] == "major"
+                        )
+                        minor_errors = sum(
+                            1 for span in esa_spans if span["severity"] == "minor"
+                        )
 
-                    if major_errors > 0:
-                        system_classification[system] = "hard"
-                    else:
-                        # No major errors; now check number of minor errors.
-                        if minor_errors <= 1:
-                            system_classification[system] = "easy"
-                        elif 1 < minor_errors < 5:
-                            system_classification[system] = "mixed"
-                        else:  # minor_errors >= 5
+                        if major_errors > 0:
                             system_classification[system] = "hard"
+                        else:
+                            # No major errors; now check number of minor errors.
+                            if minor_errors <= 1:
+                                system_classification[system] = "easy"
+                            elif 1 < minor_errors < 5:
+                                system_classification[system] = "mixed"
+                            else:  # minor_errors >= 5
+                                system_classification[system] = "hard"
+                    else:
+                        esa_score = int(annotation["esa_score"])
+                        if esa_score < 66:
+                            system_classification[system] = "hard"
+                        elif esa_score > 80:
+                            system_classification[system] = "easy"
+                        else:
+                            system_classification[system] = "mixed"
+
                 num_systems = len(system_classification)
                 assert num_systems > 0
                 easy_count = sum(
@@ -302,7 +344,9 @@ def analyze_segments_condition(
 
 
 def analyze_mqm_segments_condition(
-    easy_systems_threshold: float = 0.8, hard_systems_threshold: float = 0.8
+    easy_systems_threshold: float = 0.8,
+    hard_systems_threshold: float = 0.8,
+    domains: Union[str, List[str]] = "all",
 ) -> Dict:
     """
     For each segment, each system's annotation is classified as follows:
@@ -317,6 +361,7 @@ def analyze_mqm_segments_condition(
     Args:
         easy_systems_threshold: Proportion of systems that need to classify a segment as easy for 'EASY' seg class.
         hard_systems_threshold: Proportion of systems that need to classify a segment as hard for 'HARD' seg class.
+        domains: Domains to be analyzed. If not specified, all domains are considered ('all'). Default: 'all'.
 
     Returns:
         Dict: Dictionary containing segment-level classification results.
@@ -338,7 +383,7 @@ def analyze_mqm_segments_condition(
         for sys, ratings in system_ratings.items():
             assert len(ratings) == len(eval_set.src) == len(domains_per_seg)
             for line_id, (rating, domain) in enumerate(zip(ratings, domains_per_seg)):
-                if rating is None or domain != "news":
+                if rating is None or (domains != "all" and domain not in domains):
                     continue
                 seg_groups[line_id].append((sys, rating))
 
@@ -386,13 +431,16 @@ def analyze_mqm_segments_condition(
     return analysis_seg_res
 
 
-def plot_item_classes(analysis_res: Dict, plot_path: Path) -> None:
+def plot_item_classes(
+    analysis_res: Dict, plot_path: Path, domains: Union[str, List[str]] = "all"
+) -> None:
     """
     Aggregates item (document or segment) classification counts per language pair and saves a stacked bar chart.
 
     Args:
         analysis_res (Dict): Classification results.
         plot_path (Path): File path to save the plot.
+        domains (Union[str, List[str]]): Domains to be analyzed. If not specified, all domains are considered ('all').
     """
     counts_per_lp = defaultdict(lambda: defaultdict(int))
 
@@ -456,7 +504,9 @@ def plot_item_classes(analysis_res: Dict, plot_path: Path) -> None:
     ax.set_xlabel("Language Pair")
     ylabel = f"Number of {granularity}s"
     ax.set_ylabel(ylabel)
-    ax.set_title(f"{granularity} Classification Counts per Language Pair")
+    ax.set_title(
+        f"{granularity} Classification Counts per Language Pair (domains: {domains})"
+    )
     ax.legend()
     plt.tight_layout()
     plt.savefig(plot_path, bbox_inches="tight")
@@ -469,6 +519,7 @@ def error_spans_analysis_command() -> None:
     """
     args = read_arguments().parse_args()
 
+    domains = args.domains
     if args.wmt24_esa_jsonl_path is not None:
         data = []
         with open(args.wmt24_esa_jsonl_path, encoding="utf-8") as f:
@@ -487,7 +538,7 @@ def error_spans_analysis_command() -> None:
         doc_id2sys_translations, news_lps = dict(), set()
         for segment_annotation in data:
             if (
-                segment_annotation["domain"] != "news"
+                (domains != "all" and segment_annotation["domain"] not in domains)
                 or segment_annotation["langs"][:2] != "en"
                 or segment_annotation["system"] in systems_to_filter
             ):
@@ -520,8 +571,9 @@ def error_spans_analysis_command() -> None:
             ][segment_annotation["system"]].append(segment_annotation)
 
         logging.info(
-            f"Total number of docs in the news domain for wmt24 with ESA annotations: {len(doc_id2sys_translations)}\t"
-            f"Total number of language pairs in the news domain for wmt24 with ESA annotations: {len(news_lps)}."
+            f"Total number of docs for {domains} domains in wmt24 with ESA annotations: "
+            f"{len(doc_id2sys_translations)}\t Total number of language pairs for {domains} domains in wmt24 with ESA "
+            f"annotations: {len(news_lps)}."
         )
 
         # Choose analysis based on granularity argument
@@ -536,6 +588,7 @@ def error_spans_analysis_command() -> None:
                 doc_id2sys_translations,
                 args.easy_systems_threshold,
                 args.hard_systems_threshold,
+                args.threshold_type,
             )
 
     else:
@@ -543,7 +596,7 @@ def error_spans_analysis_command() -> None:
             args.easy_systems_threshold, args.hard_systems_threshold
         )
 
-    plot_item_classes(analysis_res, args.out_plot_path)
+    plot_item_classes(analysis_res, args.out_plot_path, domains)
 
 
 if __name__ == "__main__":
