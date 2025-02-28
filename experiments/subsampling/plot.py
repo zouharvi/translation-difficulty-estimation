@@ -1,53 +1,66 @@
+import logging
 from pathlib import Path
-from typing import Dict, Union, List
 
 import numpy as np
 from matplotlib import pyplot as plt
+from typing import List
 
-from difficulty_sampling.data import Data
+
+logger = logging.getLogger(__name__)
 
 
 def plot_human_scores_hist(
-    scored_data: Data, scorer_name: str, bins: np.ndarray, out_plot_path: Path
+    sorted_human_scores: List[List[float]],
+    scorer_name: str,
+    bins: np.ndarray,
+    out_plot_path: Path,
 ) -> None:
     """
     Plot the hist of the human scores contained in the scored input data.
 
     Args:
-        scored_data (Data): Data containing scores to use for subsampling.
+        sorted_human_scores (List[List[float]]): Human scores (for several language pairs) sorted wrt the used scorer.
         scorer_name (str): Which name to use to identify the scorer used for subsampling.
         bins (np.ndarray): Bins to use for the hist plot.
         out_plot_path (Path): Path where to save the output hist plot.
     """
-    data_y1 = np.array(
+    all_human_scores = np.array(
         [
-            np.average([v["human"] for v in l["scores"].values()])
-            for l in scored_data.src_data_list
+            human_score
+            for system_human_scores in sorted_human_scores
+            for human_score in system_human_scores
         ]
     )
-    len_flat = len(data_y1)
-    data_y2 = np.array(
+    logger.info(f"Total number of human scores: {len(all_human_scores)}.")
+    most_diff_half_human_scores, most_diff_quarter_human_scores = np.array(
         [
-            np.average([v["human"] for v in l["scores"].values()])
-            for l in scored_data.src_data_list
-        ][: int(len_flat * 0.50)]
-    )
-    data_y3 = np.array(
+            human_score
+            for system_human_scores in sorted_human_scores[
+                : int(len(sorted_human_scores) * 0.50)
+            ]
+            for human_score in system_human_scores
+        ]
+    ), np.array(
         [
-            np.average([v["human"] for v in l["scores"].values()])
-            for l in scored_data.src_data_list
-        ][: int(len_flat * 0.25)]
+            human_score
+            for system_human_scores in sorted_human_scores[
+                : int(len(sorted_human_scores) * 0.25)
+            ]
+            for human_score in system_human_scores
+        ]
     )
 
     plt.hist(
-        [data_y1, data_y2, data_y3],
+        [all_human_scores, most_diff_half_human_scores, most_diff_quarter_human_scores],
         density=True,
         bins=bins,
         label=["All", "Selected 50%", "Selected 25%"],
     )
 
     plt.legend()
-    plt.title(f"Selection with {scorer_name}. Total number of src: {len_flat}.")
+    plt.title(
+        f"Selection with {scorer_name}. Number of src: {len(sorted_human_scores)}."
+    )
 
     # Save the figure
     out_plot_path.parent.mkdir(parents=True, exist_ok=True)

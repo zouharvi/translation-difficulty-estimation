@@ -94,7 +94,7 @@ class Features:
             raise (ValueError(f"Feature {feature} not available"))
 
         if feature == "src_length":
-            for sample in self.data.src_data_list:
+            for sample in self.data.lp2src_data_list:
                 for system in sample["scores"]:
                     sample["scores"][system]["src_length"] = len(sample["src"])
 
@@ -108,31 +108,31 @@ class Features:
                 / f"ner_counts.{self.data.dataset_name}.{self.data.lp}.{self.data.domains}.pkl"
             )
 
-            counts = src_NER(self.data.src_data_list, filepath=filepath)
-            for idx, sample in enumerate(self.data.src_data_list):
+            counts = src_NER(self.data.lp2src_data_list, filepath=filepath)
+            for idx, sample in enumerate(self.data.lp2src_data_list):
                 assert sample["i"] == counts[idx]["segment"]
                 for system in sample["scores"]:
                     sample["scores"][system][feature] = counts[idx]["count"]
 
         elif feature == "cometsrc_avg":
             data_new = subset2evaluate.select_subset.basic(
-                method="cometsrc_avg", data=self.data.src_data_list
+                method="cometsrc_avg", data=self.data.lp2src_data_list
             )
             data_new = {
                 sample["i"]: sample["subset2evaluate_utility"] for sample in data_new
             }
-            for sample in self.data.src_data_list:
+            for sample in self.data.lp2src_data_list:
                 for system in sample["scores"]:
                     sample["scores"][system]["cometsrc_avg"] = data_new[sample["i"]]
 
         elif feature == "cometsrc_diversity":
             data_new = subset2evaluate.select_subset.basic(
-                method="cometsrc_diversity", data=self.data.src_data_list
+                method="cometsrc_diversity", data=self.data.lp2src_data_list
             )
             data_new = {
                 sample["i"]: sample["subset2evaluate_utility"] for sample in data_new
             }
-            for sample in self.data.src_data_list:
+            for sample in self.data.lp2src_data_list:
                 for system in sample["scores"]:
                     sample["scores"][system]["cometsrc_diversity"] = data_new[
                         sample["i"]
@@ -146,12 +146,12 @@ class Features:
             model_path = download_model("sapienzanlp/sentinel-src-mqm")
             model = load_from_checkpoint(model_path)
 
-            sources = [{"src": sample["src"]} for sample in self.data.src_data_list]
+            sources = [{"src": sample["src"]} for sample in self.data.lp2src_data_list]
             scores = model.predict(sources, batch_size=32, gpus=1).scores
 
-            assert len(scores) == len(self.data.src_data_list)
+            assert len(scores) == len(self.data.lp2src_data_list)
 
-            for idx, sample in enumerate(self.data.src_data_list):
+            for idx, sample in enumerate(self.data.lp2src_data_list):
                 for system in sample["scores"]:
                     sample["scores"][system]["sentinel_src"] = scores[idx]
 
@@ -190,7 +190,7 @@ class Features:
                 which should have been previously computed and added to the score of each system, for each translation
         """
 
-        data = self.data.src_data_list
+        data = self.data.lp2src_data_list
         protocol = self.data.protocol
         datadir = self.savedir / feature
 

@@ -1,3 +1,4 @@
+import logging
 from typing import Dict
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
@@ -9,6 +10,9 @@ from subsampling.sentinel import subsample_with_sentinel_src
 from subsampling.word_frequency import subsample_with_word_frequency
 from subsampling.syntactic_complexity import subsample_with_syntactic_complexity
 from subsampling.plot import plot_human_scores_hist
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 def read_arguments() -> ArgumentParser:
@@ -27,7 +31,7 @@ def read_arguments() -> ArgumentParser:
         "--lp",
         type=str,
         default="en-es",
-        help="Language pair to consider in the WMT dataset passed in input. If 'all_en' is passed, all the wmt24 "
+        help="Language pair to consider in the WMT dataset passed in input. If 'en-x' is passed, all the wmt24 "
         "language pairs with English on the source side will be used, and the '--dataset-name' argument will be "
         "ignored. Default: 'en-es'.",
     )
@@ -58,10 +62,24 @@ def read_arguments() -> ArgumentParser:
     )
 
     parser.add_argument(
+        "--use-tgt-lang",
+        action="store_true",
+        help="Whether to use the target language token in the input data for the sentinel-src metric. Default: False.",
+    )
+
+    parser.add_argument(
         "--batch-size",
         default=32,
         type=int,
-        help="Batch size to use when running inference with the input sentinel-src metric model. Default: 32.",
+        help="Batch size to use when running inference with the input sentinel-src metric. Default: 32.",
+    )
+
+    parser.add_argument(
+        "--syntactic-model-name",
+        type=str,
+        default="en_core_web_sm",
+        help="Which spaCy Dependency Parsing model to use for Syntactic Structure Complexity subsampling. "
+        "Default: 'en_core_web_sm'.",
     )
 
     parser.add_argument(
@@ -80,11 +98,10 @@ def read_arguments() -> ArgumentParser:
     )
 
     parser.add_argument(
-        "--syntactic-model-name",
+        "--systems-to-filter",
         type=str,
-        default="en_core_web_sm",
-        help="Which spaCy Dependency Parsing model to use for Syntactic Structure Complexity subsampling. "
-        "Default: 'en_core_web_sm'.",
+        nargs="+",
+        help="Systems to exclude from the analysis.",
     )
 
     parser.add_argument(
@@ -113,6 +130,9 @@ def get_src_score(src_data: SrcData, scorer_name: str) -> float:
 
 
 def subsample_command() -> None:
+    """
+    Command to subsample WMT data using the outputs returned by a given scoring method.
+    """
     args: Namespace = read_arguments().parse_args()
 
     if args.scorer_name in {"sentinel-src-mqm", "sentinel-src-da"}:
@@ -122,17 +142,73 @@ def subsample_command() -> None:
     elif args.scorer_name == "syntactic_complexity":
         command = subsample_with_syntactic_complexity
     else:
-        raise ValueError(f"Scorer name '{args.scorer_name}' not recognized.")
+        raise ValueError(
+            f"Scorer name '{args.scorer_name}' not recognized! Allowed values: 'sentinel-src-mqm', 'sentinel-src-da', "
+            f"'word_frequency', 'word_zipf_frequency', 'syntactic_complexity'."
+        )
 
     data = command(args)
 
-    # Sort the src data in ascending order in terms of the scorer output
-    data.src_data_list.sort(
-        key=lambda src_data: get_src_score(src_data, args.scorer_name)
-    )
+    # Sort the human scores in ascending order in terms of the scorer output
+    sorted_human_scores = []
+    if command == subsample_with_sentinel_src and args.use_tgt_lang:
+        lp2sorted_src_data_list = {
+            lp: sorted(
+                enumerate(src_data_list),
+                key=lambda pair: get_src_score(pair[1], args.scorer_name),
+            )
+            for lp, src_data_list in data.lp2src_data_list.items()
+        }
+
+        added_src_ids = set()
+        while len(sorted_human_scores) < len(
+            next(iter(data.lp2src_data_list.values()))
+        ):
+            for sorted_src_data_list in lp2sorted_src_data_list.values():
+                if len(sorted_src_data_list) == 0:
+                    break
+
+                src_idx, src_data = sorted_src_data_list.pop(0)
+                if src_idx in added_src_ids:
+                    continue
+
+                sorted_human_scores.append(
+                    [
+                        src_data_list[src_idx]["scores"][sys]["human"]
+                        for src_data_list in data.lp2src_data_list.values()
+                        for sys in src_data_list[src_idx]["scores"]
+                        if sys not in args.systems_to_filter
+                    ]
+                )
+                added_src_ids.add(src_idx)
+        assert (
+            len(
+                set(
+                    len(sorted_src_data_list)
+                    for sorted_src_data_list in lp2sorted_src_data_list.values()
+                )
+            )
+            == 1
+        )
+    else:
+        for src_idx in [
+            src_idx
+            for src_idx, src_data in sorted(
+                enumerate(next(iter(data.lp2src_data_list.values()))),
+                key=lambda pair: get_src_score(pair[1], args.scorer_name),
+            )
+        ]:
+            sorted_human_scores.append(
+                [
+                    src_data_list[src_idx]["scores"][sys]["human"]
+                    for src_data_list in data.lp2src_data_list.values()
+                    for sys in src_data_list[src_idx]["scores"]
+                    if sys not in args.systems_to_filter
+                ]
+            )
 
     plot_human_scores_hist(
-        data,
+        sorted_human_scores,
         args.scorer_name,
         (
             np.arange(0, 100 + 10, 10)

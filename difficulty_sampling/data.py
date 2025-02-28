@@ -1,8 +1,11 @@
 from typing import Dict, List, Union, TypedDict, Optional
 import logging
 
-from difficulty_sampling import wmt24_from_en_lps, wmt24_from_en_lps_mqm
+from difficulty_sampling import wmt24_from_en_lps_esa, wmt24_from_en_lps_mqm
 from difficulty_sampling.utils import load_data_wmt
+
+
+logger = logging.getLogger(__name__)
 
 
 class SrcData(TypedDict, total=False):
@@ -16,19 +19,18 @@ class SrcData(TypedDict, total=False):
     scores: Dict[
         str, Dict[str, float]
     ]  # Segment-level scores given by metrics to systems.
-    lp: Optional[str]  # Language pair.
 
 
 class Data:
     def __init__(
         self,
-        src_data_list: List[SrcData],
+        lp2src_data_list: Dict[str, List[SrcData]],
         dataset_name: str,
         lp: str,
         protocol: str,
         domains: str,
     ):
-        self.src_data_list = src_data_list
+        self.lp2src_data_list = lp2src_data_list
 
         self.dataset_name = dataset_name
         self.lp = lp
@@ -48,39 +50,49 @@ class Data:
 
         Args:
             dataset_name (str): Name of the dataset (e.g. wmt24, wmt23, ...)
-            lp (str): Language pair (e.g., en-es, en-de, ...). 'all_en' -> all EN-X wmt24 data will be used.
+            lp (str): Language pair (e.g., en-es, en-de, ...). 'en-x' -> all EN-X wmt24 data will be used.
             protocol (str): Protocol used for evaluation (e.g., esa, mqm, ...)
             domains (Union[str, List[str]], optional): List of domains to analyze (e.g., ['news']). Defaults to "all".
         """
-        logging.info(
+        logger.info(
             f"Loading dataset: {dataset_name}\tLanguage pair: {lp}\tProtocol: {protocol}."
         )
-        if lp == "all_en":
-            data = []
-            lps = wmt24_from_en_lps if protocol == "esa" else wmt24_from_en_lps_mqm
-            for lp in lps:
-                data += [
-                    {**src_data, "lp": lp}
-                    for src_data in load_data_wmt(
-                        year="wmt24", langs=lp, normalize=False, file_protocol=protocol
-                    )
-                ]
-        else:
-            data = [
-                {**src_data, "lp": lp}
-                for src_data in load_data_wmt(
-                    year=dataset_name, langs=lp, normalize=False, file_protocol=protocol
-                )
-            ]
 
-        logging.info("Num segments before domain filtering: {}".format(len(data)))
+        if lp == "en-x":
+            lps = wmt24_from_en_lps_esa if protocol == "esa" else wmt24_from_en_lps_mqm
+        else:
+            lps = [lp]
+
+        lp2src_data_list = {
+            lp: load_data_wmt(
+                year="wmt24" if lp == "en-x" else dataset_name,
+                langs=lp,
+                normalize=False,
+                file_protocol=protocol,
+            )
+            for lp in lps
+        }
+
+        logger.info(
+            "Num segments before domain filtering: {}".format(
+                len(next(iter(lp2src_data_list.values())))
+            )
+        )
 
         if domains != "all":
-            logging.info(f"Filtering data to the domains: {domains}.")
+            logger.info(f"Filtering data to the domains: {domains}.")
 
-            data = [sample for sample in data if sample["domain"] in domains]
+            lp2src_data_list = {
+                lp: [sample for sample in src_data_list if sample["domain"] in domains]
+                for lp, src_data_list in lp2src_data_list.items()
+            }
+
             domains = "_".join(sorted(domains))
 
-            logging.info("Num segments after domain filtering: {}.".format(len(data)))
+            logger.info(
+                "Num segments after domain filtering: {}.".format(
+                    len(next(iter(lp2src_data_list.values())))
+                )
+            )
 
-        return cls(data, dataset_name, lp, protocol, domains)
+        return cls(lp2src_data_list, dataset_name, lp, protocol, domains)

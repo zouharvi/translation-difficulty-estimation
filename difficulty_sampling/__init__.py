@@ -3,9 +3,8 @@
 import difficulty_sampling.utils
 import difficulty_sampling.evaluate
 
-wmt24_from_en_lps = [
-    "en-cs",
-    "en-de",
+wmt24_from_en_lps_esa = [
+    # "en-cs",
     "en-es",
     "en-hi",
     "en-is",

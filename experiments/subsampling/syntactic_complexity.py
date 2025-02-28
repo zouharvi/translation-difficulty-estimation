@@ -6,7 +6,8 @@ from spacy.tokens import Token, Doc
 
 from difficulty_sampling.data import Data
 
-logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger(__name__)
 
 
 def compute_token_depth(token: Token) -> int:
@@ -50,9 +51,9 @@ def syntactic_complexity_score(
     """
     Score the input data using a syntactic structure complexity metric based on dependency tree height.
 
-    For each source sentence, the dependency tree is computed with spaCy, and its tree height (maximum dependency depth)
-    is used as the complexity score. Higher scores indicate more complex syntactic
-    structure (and therefore, higher difficulty).
+    For each source sentence, the dependency tree is computed with spaCy, and the negative of its tree height
+    (maximum dependency depth) is used as the complexity score. Higher scores indicate less complex syntactic
+    structure (and therefore, less difficulty).
 
     The computed score is added to each sample's scores for every MT system.
 
@@ -64,23 +65,25 @@ def syntactic_complexity_score(
     Returns:
         Data: The input data with an additional score (scorer_name) for each MT system.
     """
-    logging.info(f"Loading spaCy model: {model_name}.")
+    logger.info(f"Loading spaCy model: {model_name}.")
     nlp = spacy.load(model_name)
 
     scores = []
-    logging.info("Computing syntactic complexity scores for each source sentence...")
-    for sample in data.src_data_list:
+    logger.info("Computing syntactic complexity scores for each source sentence...")
+    for sample in next(iter(data.lp2src_data_list.values())):
         doc = nlp(sample["src"])
         height = compute_dependency_tree_height(doc)
-        scores.append(height)
+        scores.append(-height)
 
-    assert len(scores) == len(data.src_data_list)
     # Since this is a source-based metric, the same score applies for all systems.
-    for idx, sample in enumerate(data.src_data_list):
-        for system in sample["scores"]:
-            sample["scores"][system][scorer_name] = scores[idx]
+    for lp, src_data_list in data.lp2src_data_list.items():
+        assert len(scores) == len(src_data_list)
+        for idx, sample in enumerate(src_data_list):
+            for system in sample["scores"]:
+                sample["scores"][system][scorer_name] = scores[idx]
 
-    logging.info("Syntactic complexity scoring complete.")
+    logger.info("Syntactic complexity scoring complete.")
+
     return data
 
 
@@ -104,8 +107,8 @@ def subsample_with_syntactic_complexity(args: Namespace) -> Data:
             protocol=args.protocol,
             domains=args.domains,
         ),
-        scorer_name=getattr(args, "scorer_name", "syntactic_complexity"),
-        model_name=getattr(args, "syntactic_model_name", "en_core_web_sm"),
+        args.scorer_name,
+        args.syntactic_model_name,
     )
 
     return scored_data

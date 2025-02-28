@@ -1,11 +1,16 @@
+import logging
 from argparse import Namespace
+from typing import Literal
 
 from difficulty_sampling.data import Data
 
 
+logger = logging.getLogger(__name__)
+
+
 def word_frequency_score(
     data: Data,
-    scorer_name: str,
+    scorer_name: Literal["word_frequency", "word_zipf_frequency"],
 ) -> Data:
     """
     Assign to each source a score that depends on the word frequency of its words
@@ -20,30 +25,29 @@ def word_frequency_score(
     """
     from wordfreq import word_frequency, zipf_frequency, tokenize
 
-    print("Counting frequencies for source language: ", data.lp.split("-")[0])
-    sources = [{"src": sample["src"]} for sample in data.src_data_list]
+    if scorer_name != "word_frequency" and scorer_name != "word_zipf_frequency":
+        raise ValueError(
+            f"Scorer name '{scorer_name}' not recognized! Allowed values: 'word_frequency', 'word_zipf_frequency'."
+        )
 
-    scores = []
-    for source_elem in sources:
-        src = source_elem["src"]
-        tokens = tokenize(src, data.lp.split("-")[0])
-        if scorer_name == "word_frequency":
-            avg_freq = sum(
-                word_frequency(token, data.lp.split("-")[0]) for token in tokens
-            ) / len(tokens)
-        elif scorer_name == "word_zipf_frequency":
-            avg_freq = sum(
-                zipf_frequency(token, data.lp.split("-")[0]) for token in tokens
-            ) / len(tokens)
-        else:
-            raise ValueError(f"Scorer name '{scorer_name}' not recognized.")
-        scores.append(avg_freq)
+    src_lang = data.lp.split("-")[0]
+    logger.info(f"Counting frequencies for source language: {src_lang}.")
 
-    assert len(scores) == len(data.src_data_list)
+    scoring_funct, scores = (
+        word_frequency if scorer_name == "word_frequency" else zipf_frequency,
+        [],
+    )
+    for sample in next(iter(data.lp2src_data_list.values())):
+        tokens = tokenize(sample["src"], src_lang)
+        scores.append(
+            sum(scoring_funct(token, src_lang) for token in tokens) / len(tokens)
+        )
 
-    for idx, sample in enumerate(data.src_data_list):
-        for system in sample["scores"]:
-            sample["scores"][system][scorer_name] = scores[idx]
+    for lp, src_data_list in data.lp2src_data_list.items():
+        assert len(src_data_list) == len(scores)
+        for idx, sample in enumerate(src_data_list):
+            for system in sample["scores"]:
+                sample["scores"][system][scorer_name] = scores[idx]
 
     return data
 
@@ -65,7 +69,7 @@ def subsample_with_word_frequency(args: Namespace) -> Data:
             protocol=args.protocol,
             domains=args.domains,
         ),
-        scorer_name=args.scorer_name,
+        args.scorer_name,
     )
 
     return scored_data
