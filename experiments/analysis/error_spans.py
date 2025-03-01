@@ -254,8 +254,8 @@ def analyze_segments_condition(
       - 'easy' if it contains no major errors and at most one minor error.
       - 'mixed' if it contains no major errors and the number of minor errors is greater than 1 and less than 5.
     Instead, if threshold_type is 'scores':
-      - 'hard' if the ESA score < 33.
-      - 'easy' if the ESA score >= 66.
+      - 'hard' if the ESA score < 66.
+      - 'easy' if the ESA score > 80.
       - 'mixed' otherwise.
 
     Then, for each segment, the overall classification is:
