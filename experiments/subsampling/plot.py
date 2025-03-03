@@ -36,7 +36,7 @@ def plot_human_scores_hist(
         [
             human_score
             for system_human_scores in sorted_human_scores[
-                : int(len(sorted_human_scores) * 0.50)
+                : len(sorted_human_scores) // 2
             ]
             for human_score in system_human_scores
         ]
@@ -44,7 +44,7 @@ def plot_human_scores_hist(
         [
             human_score
             for system_human_scores in sorted_human_scores[
-                : int(len(sorted_human_scores) * 0.25)
+                : len(sorted_human_scores) // 4
             ]
             for human_score in system_human_scores
         ]

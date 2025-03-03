@@ -1,11 +1,11 @@
 import logging
-from typing import Dict
+from typing import Dict, List, Optional
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 import numpy as np
 
-from difficulty_sampling.data import SrcData
+from difficulty_sampling.data import SrcData, Data
 from subsampling.sentinel import subsample_with_sentinel_src
 from subsampling.word_frequency import subsample_with_word_frequency
 from subsampling.syntactic_complexity import subsample_with_syntactic_complexity
@@ -91,10 +91,11 @@ def read_arguments() -> ArgumentParser:
             "word_frequency",
             "word_zipf_frequency",
             "syntactic_complexity",
+            "human",
         ],
         default="sentinel-src-mqm",
         help="Which name to use to identify the scorer used. Allowed values: 'sentinel-src-mqm', 'sentinel-src-da', "
-        "'word_frequency', 'word_zipf_frequency', 'syntactic_complexity'. Default: 'sentinel-src-mqm'.",
+        "'word_frequency', 'word_zipf_frequency', 'syntactic_complexity', 'human'. Default: 'sentinel-src-mqm'.",
     )
 
     parser.add_argument(
@@ -114,18 +115,30 @@ def read_arguments() -> ArgumentParser:
     return parser
 
 
-def get_src_score(src_data: SrcData, scorer_name: str) -> float:
+def get_src_score(
+    src_data: SrcData, scorer_name: str, systems_to_filter: Optional[List[str]] = None
+) -> float:
     """
     Return the score assigned by the input scorer to the src data.
 
     Args:
         src_data (SrcData): SrcData Dictionary containing all the info for a given src segment.
         scorer_name (str): Name of the scorer to use to extract the score from the data.
+        systems_to_filter (Optional[List[str]]): Sys to exclude from the analysis (used iff `scorer_name` is `'human'`).
 
     Returns:
         score (float): Score assigned by the input scorer to the src data.
     """
     scores: Dict[str, Dict[str, float]] = src_data["scores"]  # More explicit typing
+
+    if scorer_name == "human":
+        human_scores_sum, n_sys = 0, 0
+        for sys in scores:
+            if sys not in systems_to_filter:
+                human_scores_sum += scores[sys]["human"]
+                n_sys += 1
+        return human_scores_sum / n_sys
+
     return scores[next(iter(scores))][scorer_name]
 
 
@@ -135,27 +148,41 @@ def subsample_command() -> None:
     """
     args: Namespace = read_arguments().parse_args()
 
+    command = None
     if args.scorer_name in {"sentinel-src-mqm", "sentinel-src-da"}:
         command = subsample_with_sentinel_src
     elif args.scorer_name in {"word_frequency", "word_zipf_frequency"}:
         command = subsample_with_word_frequency
     elif args.scorer_name == "syntactic_complexity":
         command = subsample_with_syntactic_complexity
-    else:
+    elif args.scorer_name != "human":
         raise ValueError(
             f"Scorer name '{args.scorer_name}' not recognized! Allowed values: 'sentinel-src-mqm', 'sentinel-src-da', "
-            f"'word_frequency', 'word_zipf_frequency', 'syntactic_complexity'."
+            f"'word_frequency', 'word_zipf_frequency', 'syntactic_complexity', 'human'."
         )
 
-    data = command(args)
+    data = (
+        Data.load(
+            dataset_name=args.dataset_name,
+            lp=args.lp,
+            protocol=args.protocol,
+            domains=args.domains,
+        )
+        if args.scorer_name == "human"
+        else command(args)
+    )
 
     # Sort the human scores in ascending order in terms of the scorer output
     sorted_human_scores = []
-    if command == subsample_with_sentinel_src and args.use_tgt_lang:
+    if (
+        command == subsample_with_sentinel_src or args.scorer_name == "human"
+    ) and args.use_tgt_lang:
         lp2sorted_src_data_list = {
             lp: sorted(
                 enumerate(src_data_list),
-                key=lambda pair: get_src_score(pair[1], args.scorer_name),
+                key=lambda pair: get_src_score(
+                    pair[1], args.scorer_name, args.systems_to_filter
+                ),
             )
             for lp, src_data_list in data.lp2src_data_list.items()
         }
@@ -191,13 +218,73 @@ def subsample_command() -> None:
             == 1
         )
     else:
-        for src_idx in [
-            src_idx
-            for src_idx, src_data in sorted(
-                enumerate(next(iter(data.lp2src_data_list.values()))),
-                key=lambda pair: get_src_score(pair[1], args.scorer_name),
+        if args.scorer_name == "human":
+            sorted_src_data_ids = []
+            for src_idx in range(len(next(iter(data.lp2src_data_list.values())))):
+                sorted_src_data_ids.append(
+                    [
+                        src_data_list[src_idx]["scores"][sys]["human"]
+                        for src_data_list in data.lp2src_data_list.values()
+                        for sys in src_data_list[src_idx]["scores"]
+                        if sys not in args.systems_to_filter
+                    ]
+                )
+            # Compute the sorted src indexes by averaging all the human scores for all the MT systems across the lps.
+            sorted_src_data_ids = sorted(
+                range(len(sorted_src_data_ids)),
+                key=lambda idx: sum(sorted_src_data_ids[idx])
+                / len(sorted_src_data_ids[idx]),
             )
-        ]:
+
+            lp2sorted_src_data_ids = {
+                lp: sorted(
+                    range(len(src_data_list)),
+                    key=lambda idx: get_src_score(
+                        src_data_list[idx], args.scorer_name, args.systems_to_filter
+                    ),
+                )
+                for lp, src_data_list in data.lp2src_data_list.items()
+            }
+
+            for lp in lp2sorted_src_data_ids:
+                assert len(lp2sorted_src_data_ids[lp]) == len(sorted_src_data_ids)
+
+                overlap = len(
+                    set(
+                        lp2sorted_src_data_ids[lp][
+                            : len(lp2sorted_src_data_ids[lp]) // 2
+                        ]
+                    )
+                    & set(sorted_src_data_ids[: len(sorted_src_data_ids) // 2])
+                )
+                logging.info(
+                    f"Selected 50% overlap between general human scorer and {lp} human scorer: "
+                    f"{round((overlap / (len(sorted_src_data_ids) // 2)) * 100, 2)}%"
+                )
+
+                overlap = len(
+                    set(
+                        lp2sorted_src_data_ids[lp][
+                            : len(lp2sorted_src_data_ids[lp]) // 4
+                        ]
+                    )
+                    & set(sorted_src_data_ids[: len(sorted_src_data_ids) // 4])
+                )
+                logging.info(
+                    f"Selected 25% overlap between general human scorer and {lp} human scorer: "
+                    f"{round((overlap / (len(sorted_src_data_ids) // 4)) * 100, 2)}%\n"
+                )
+
+        else:
+            sorted_src_data_ids = [
+                src_idx
+                for src_idx, src_data in sorted(
+                    enumerate(next(iter(data.lp2src_data_list.values()))),
+                    key=lambda pair: get_src_score(pair[1], args.scorer_name),
+                )
+            ]
+
+        for src_idx in sorted_src_data_ids:
             sorted_human_scores.append(
                 [
                     src_data_list[src_idx]["scores"][sys]["human"]
