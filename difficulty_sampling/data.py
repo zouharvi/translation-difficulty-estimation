@@ -25,15 +25,15 @@ class Data:
     def __init__(
         self,
         lp2src_data_list: Dict[str, List[SrcData]],
+        lps: List[str],
         dataset_name: str,
-        lp: str,
         protocol: str,
         domains: str,
     ):
         self.lp2src_data_list = lp2src_data_list
 
+        self.lps = lps
         self.dataset_name = dataset_name
-        self.lp = lp
         self.protocol = protocol
         self.domains = domains
 
@@ -41,7 +41,7 @@ class Data:
     def load(
         cls,
         dataset_name: str,
-        lp: str,
+        lps: List[str],
         protocol: str,
         domains: Union[str, List[str]] = "all",
     ):
@@ -54,14 +54,15 @@ class Data:
             protocol (str): Protocol used for evaluation (e.g., esa, mqm, ...)
             domains (Union[str, List[str]], optional): List of domains to analyze (e.g., ['news']). Defaults to "all".
         """
-        logger.info(
-            f"Loading dataset: {dataset_name}\tLanguage pair: {lp}\tProtocol: {protocol}."
-        )
 
-        if lp == "en-x":
+        if len(lps) == 1 and lps[0] == "en-x":
             lps = wmt24_from_en_lps_esa if protocol == "esa" else wmt24_from_en_lps_mqm
-        else:
-            lps = [lp]
+
+        dataset_name = "wmt24" if dataset_name == "en-x" else dataset_name
+
+        logger.info(
+            f"Loading dataset: {dataset_name}\tLanguage pairs: {' '.join(lps)}\tProtocol: {protocol}."
+        )
 
         lp2src_data_list = {
             lp: load_data_wmt(
@@ -95,4 +96,4 @@ class Data:
                 )
             )
 
-        return cls(lp2src_data_list, dataset_name, lp, protocol, domains)
+        return cls(lp2src_data_list, lps, dataset_name, protocol, domains)

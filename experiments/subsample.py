@@ -219,7 +219,7 @@ def subsample_command() -> None:
         )
     else:
         if args.scorer_name == "human":
-            sorted_src_data_ids = []
+            sorted_src_data_ids, sorted_src_data_lengths = [], []
             for src_idx in range(len(next(iter(data.lp2src_data_list.values())))):
                 sorted_src_data_ids.append(
                     [
@@ -229,6 +229,7 @@ def subsample_command() -> None:
                         if sys not in args.systems_to_filter
                     ]
                 )
+
             # Compute the sorted src indexes by averaging all the human scores for all the MT systems across the lps.
             sorted_src_data_ids = sorted(
                 range(len(sorted_src_data_ids)),
