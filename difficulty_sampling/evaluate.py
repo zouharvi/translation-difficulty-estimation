@@ -39,9 +39,9 @@ def main_eval(
     result_clusters = subset2evaluate.evaluate.eval_subset_clusters(data_new, "human")
 
     result_diff_corr = []
-    for sys in data_new[0]["scores"].keys():
-        data_y_sys = [x["scores"][sys]["human"] for x in data_new]
-        data_diff_sys = [x["scores"][sys][method_name] for x in data_new]
+    for sys in data[0]["scores"].keys():
+        data_y_sys = [x["scores"][sys]["human"] for x in data]
+        data_diff_sys = [x["scores"][sys][method_name] for x in data]
         result_diff_corr.append(scipy.stats.kendalltau(data_y_sys, data_diff_sys, variant="b").correlation)
     result_diff_corr = np.average(result_diff_corr)
 
