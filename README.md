@@ -34,6 +34,10 @@ Evaluation for now piggy-backs on top of what subset2evaluate is doing.
 This might change later.
 See `experiments/vilem/01-example.py` for an example how to create a manual difficulty sampler and evaluate it.
 
+## Running experiments
+
+- `python3 experiments/01-eval_all.py` for main results.
+
 ## Contributing
 
 - Do not commit data or executed Jupyter notebooks into this repository.
