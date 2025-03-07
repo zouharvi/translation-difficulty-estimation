@@ -35,8 +35,11 @@ subsampling.misc.apply_subset2evaluate(data, method="precomet_avg")
 subsampling.misc.apply_subset2evaluate(data, method="precomet_var")
 subsampling.misc.apply_subset2evaluate(data, method="precomet_diff")
 subsampling.misc.apply_subset2evaluate(data, method="precomet_diversity")
+subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="XCOMET")
+subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="human")
 
 METHOD_TO_NAME = {
+    "human": "Oracle",
     "src_len": "Source Length",
     "syntactic_complexity": "Syntactic Complexity",
     "word_frequency": "Word Frequency",
@@ -47,6 +50,8 @@ METHOD_TO_NAME = {
     "precomet_diversity": "PreCOMET Diversity",
     "sentinel-src-mqm": "Sentinel-MQM",
     "sentinel-src-da": "Sentinel-DA",
+    "artcrowd|GPT-4|human": "Artificial Crowd (Oracle)",
+    "artcrowd|GPT-4|XCOMET": "Artificial Crowd (XCOMET)",
 }
 
 with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
@@ -55,7 +60,7 @@ with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
         method_name = METHOD_TO_NAME.get(method_name, method_name.replace('_', ' ').title())
         print(
             f"{method_name:>20}",
-            f"{results.avg_score:.2f}",
+            f"{results.avg_score:.1f}",
             f"{results.diff_corr:.3f}",
             f"{results.clusters:.2f}",
             sep = " & ",
@@ -65,8 +70,9 @@ with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
 
 
     for method_name in [
+        "human",
         "src_len", "syntactic_complexity", "word_frequency", "word_zipf_frequency",
         "precomet_avg", "precomet_var", "precomet_diff", "precomet_diversity",
-        "sentinel-src-da", "sentinel-src-mqm",
+        "sentinel-src-da", "sentinel-src-mqm", "artcrowd|GPT-4|human", "artcrowd|GPT-4|XCOMET",
     ]:
         eval_print_table(method_name)
