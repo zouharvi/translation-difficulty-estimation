@@ -54,6 +54,7 @@ class Data:
             protocol (str): Protocol used for evaluation (e.g., esa, mqm, ...)
             domains (Union[str, List[str]], optional): List of domains to analyze (e.g., ['news']). Defaults to "all".
         """
+        assert protocol is not None, "You need to specify the protocol, such as 'esa', 'da' or 'mqm'."
 
         if len(lps) == 1 and lps[0] == "en-x":
             lps = wmt24_from_en_lps_esa if protocol == "esa" else wmt24_from_en_lps_mqm
