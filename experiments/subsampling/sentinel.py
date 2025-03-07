@@ -111,7 +111,7 @@ def subsample_with_sentinel_src(args: Namespace) -> Data:
         get_sentinel_src_metric_model(args.sentinel_src_metric_model),
         Data.load(
             dataset_name=args.dataset_name,
-            lp=args.lp,
+            lps=[args.lp],
             protocol=args.protocol,
             domains=args.domains,
         ),

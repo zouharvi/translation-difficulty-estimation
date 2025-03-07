@@ -30,7 +30,7 @@ def word_frequency_score(
             f"Scorer name '{scorer_name}' not recognized! Allowed values: 'word_frequency', 'word_zipf_frequency'."
         )
 
-    src_lang = data.lp.split("-")[0]
+    src_lang = data.lps[0].split("-")[0]
     logger.info(f"Counting frequencies for source language: {src_lang}.")
 
     scoring_funct, scores = (
@@ -65,7 +65,7 @@ def subsample_with_word_frequency(args: Namespace) -> Data:
     scored_data = word_frequency_score(
         Data.load(
             dataset_name=args.dataset_name,
-            lp=args.lp,
+            lps=[args.lp],
             protocol=args.protocol,
             domains=args.domains,
         ),

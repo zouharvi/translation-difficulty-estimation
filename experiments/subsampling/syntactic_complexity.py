@@ -103,7 +103,7 @@ def subsample_with_syntactic_complexity(args: Namespace) -> Data:
     scored_data = syntactic_complexity_score(
         Data.load(
             dataset_name=args.dataset_name,
-            lp=args.lp,
+            lps=[args.lp],
             protocol=args.protocol,
             domains=args.domains,
         ),

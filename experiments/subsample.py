@@ -164,7 +164,7 @@ def subsample_command() -> None:
     data = (
         Data.load(
             dataset_name=args.dataset_name,
-            lp=args.lp,
+            lps=[args.lp],
             protocol=args.protocol,
             domains=args.domains,
         )

@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, TypedDict, Optional
+from typing import Dict, List, Union, TypedDict
 import logging
 
 from difficulty_sampling import wmt24_from_en_lps_esa, wmt24_from_en_lps_mqm
@@ -50,15 +50,16 @@ class Data:
 
         Args:
             dataset_name (str): Name of the dataset (e.g. wmt24, wmt23, ...)
-            lp (str): Language pair (e.g., en-es, en-de, ...). 'en-x' -> all EN-X wmt24 data will be used.
+            lps (List[str]): Language pairs (e.g., en-es, en-de, ...). ['en-x'] -> all EN-X wmt24 data will be used.
             protocol (str): Protocol used for evaluation (e.g., esa, mqm, ...)
             domains (Union[str, List[str]], optional): List of domains to analyze (e.g., ['news']). Defaults to "all".
         """
 
-        if len(lps) == 1 and lps[0] == "en-x":
-            lps = wmt24_from_en_lps_esa if protocol == "esa" else wmt24_from_en_lps_mqm
-
-        dataset_name = "wmt24" if dataset_name == "en-x" else dataset_name
+        if lps == ["en-x"]:
+            dataset_name, lps = (
+                "wmt24",
+                wmt24_from_en_lps_esa if protocol == "esa" else wmt24_from_en_lps_mqm,
+            )
 
         logger.info(
             f"Loading dataset: {dataset_name}\tLanguage pairs: {' '.join(lps)}\tProtocol: {protocol}."
@@ -66,7 +67,7 @@ class Data:
 
         lp2src_data_list = {
             lp: load_data_wmt(
-                year="wmt24" if lp == "en-x" else dataset_name,
+                year=dataset_name,
                 langs=lp,
                 normalize=False,
                 file_protocol=protocol,
