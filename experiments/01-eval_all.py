@@ -17,6 +17,16 @@ import subsampling.misc
 data = difficulty_sampling.data.Data.load(dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa")
 
 # apply scorers to the whole data
+subsampling.sentinel.sentinel_src_metric_model_score(
+    subsampling.sentinel.get_sentinel_src_metric_model("sapienzanlp/sentinel-src-mqm"),
+    scorer_name="sentinel-src-mqm",
+    data=data, use_tgt_lang_token=False
+)
+subsampling.sentinel.sentinel_src_metric_model_score(
+    subsampling.sentinel.get_sentinel_src_metric_model("sapienzanlp/sentinel-src-da"),
+    scorer_name="sentinel-src-da",
+    data=data, use_tgt_lang_token=False
+)
 subsampling.misc.apply_src_len(data)
 subsampling.syntactic_complexity.syntactic_complexity_score(data, "syntactic_complexity")
 subsampling.word_frequency.word_frequency_score(data, "word_frequency")
@@ -25,8 +35,6 @@ subsampling.misc.apply_subset2evaluate(data, method="precomet_avg")
 subsampling.misc.apply_subset2evaluate(data, method="precomet_var")
 subsampling.misc.apply_subset2evaluate(data, method="precomet_diff")
 subsampling.misc.apply_subset2evaluate(data, method="precomet_diversity")
-# NOTE: does not work now
-# subsampling.sentinel.sentinel_src_metric_model_score(subsampling.sentinel.get_sentinel_src_metric_model("sapienzanlp/sentinel-src-mqm"), data, use_tgt_lang_token=True)
 
 METHOD_TO_NAME = {
     "src_len": "Source Length",
@@ -37,7 +45,8 @@ METHOD_TO_NAME = {
     "precomet_var": "PreCOMET Variance",
     "precomet_diff": "PreCOMET Difficulty",
     "precomet_diversity": "PreCOMET Diversity",
-    "sentinel_src_metric_model": "Sentinel-SRC-MQM",
+    "sentinel-src-mqm": "Sentinel-MQM",
+    "sentinel-src-da": "Sentinel-DA",
 }
 
 with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
@@ -58,5 +67,6 @@ with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
     for method_name in [
         "src_len", "syntactic_complexity", "word_frequency", "word_zipf_frequency",
         "precomet_avg", "precomet_var", "precomet_diff", "precomet_diversity",
+        "sentinel-src-da", "sentinel-src-mqm",
     ]:
         eval_print_table(method_name)
