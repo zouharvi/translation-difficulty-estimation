@@ -2,6 +2,7 @@
 # flake8: noqa F401
 import difficulty_sampling.utils
 import difficulty_sampling.evaluate
+import pathlib
 
 wmt24_from_en_lps_esa = [
     # "en-cs",
@@ -15,3 +16,5 @@ wmt24_from_en_lps_esa = [
 ]
 
 wmt24_from_en_lps_mqm = ["en-de", "en-es"]
+
+ROOT = pathlib.Path(__file__).parent.parent.absolute()

@@ -7,6 +7,7 @@ import subset2evaluate.evaluate
 import collections
 import numpy as np
 
+
 # compute cluster count and rank correlation
 eval_clu_cor = subset2evaluate.evaluate.eval_clucor
 
@@ -23,6 +24,7 @@ def main_eval(
     """
     TODO description
     """
+    import scipy.stats
 
     data_y = [np.average([x["scores"][sys][method_name] for sys in x["scores"].keys()]) for x in data]
     # take top-B from data based on data_y
@@ -36,8 +38,12 @@ def main_eval(
 
     result_clusters = subset2evaluate.evaluate.eval_subset_clusters(data_new, "human")
 
-    # TODO:
-    result_diff_corr = 0
+    result_diff_corr = []
+    for sys in data_new[0]["scores"].keys():
+        data_y_sys = [x["scores"][sys]["human"] for x in data_new]
+        data_diff_sys = [x["scores"][sys][method_name] for x in data_new]
+        result_diff_corr.append(scipy.stats.kendalltau(data_y_sys, data_diff_sys, variant="b").correlation)
+    result_diff_corr = np.average(result_diff_corr)
 
     return MainResult(
         avg_score=result_avg_score,
