@@ -54,6 +54,7 @@ class Data:
             protocol (str): Protocol used for evaluation (e.g., esa, mqm, ...)
             domains (Union[str, List[str]], optional): List of domains to analyze (e.g., ['news']). Defaults to "all".
         """
+        assert protocol is not None, "You need to specify the protocol, such as 'esa', 'da' or 'mqm'."
 
         if lps == ["en-x"]:
             dataset_name, lps = (
