@@ -55,7 +55,6 @@ with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
         )
 
 
-    eval_print_table("src_len", B=None)
     for method_name in [
         "src_len", "syntactic_complexity", "word_frequency", "word_zipf_frequency",
         "precomet_avg", "precomet_var", "precomet_diff", "precomet_diversity",
