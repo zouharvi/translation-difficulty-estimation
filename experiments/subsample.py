@@ -97,7 +97,7 @@ def read_arguments() -> ArgumentParser:
         ],
         default="sentinel-src-mqm",
         help="Which name to use to identify the scorer used. Allowed values: 'sentinel-src-mqm', 'sentinel-src-da', "
-        "'word_frequency', 'word_zipf_frequency', 'syntactic_complexity', 'human'. Default: 'sentinel-src-mqm'.",
+        "'negative_word_frequency', 'negative_word_zipf_frequency', 'syntactic_complexity', 'human'. Default: 'sentinel-src-mqm'.",
     )
 
     parser.add_argument(
