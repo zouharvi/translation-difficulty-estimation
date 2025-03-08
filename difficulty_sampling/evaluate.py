@@ -12,7 +12,7 @@ import numpy as np
 eval_clu_cor = subset2evaluate.evaluate.eval_clucor
 
 MainResult = collections.namedtuple(
-    "MainResult", ["avg_score", "diff_corr", "clusters"]
+    "MainResult", ["avg_score", "diff_corr", "avg_perfect"]
 )
 
 
@@ -36,7 +36,12 @@ def main_eval(
         for sys in line["scores"].keys()
     ])
 
-    result_clusters = subset2evaluate.evaluate.eval_subset_clusters(data_new, "human")
+    # result_clusters = subset2evaluate.evaluate.eval_subset_clusters(data_new, "human")
+    result_avg_perfect = np.average([
+        1 if line["scores"][sys]["human"] == 100 else 0
+        for line in data_new
+        for sys in line["scores"].keys()
+    ])
 
     result_diff_corr = []
     for sys in data[0]["scores"].keys():
@@ -48,7 +53,7 @@ def main_eval(
     return MainResult(
         avg_score=result_avg_score,
         diff_corr=result_diff_corr,
-        clusters=result_clusters,
+        avg_perfect=result_avg_perfect,
     )
 
 
@@ -70,5 +75,5 @@ def main_eval_avg(
     return MainResult(
         avg_score=np.average([x.avg_score for x in results]),
         diff_corr=np.average([x.diff_corr for x in results]),
-        clusters=np.average([x.clusters for x in results]),
+        avg_perfect=np.average([x.avg_perfect for x in results]),
     )

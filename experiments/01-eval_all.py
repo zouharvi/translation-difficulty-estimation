@@ -32,10 +32,10 @@ subsampling.misc.apply_src_len(data)
 subsampling.syntactic_complexity.syntactic_complexity_score(data, "syntactic_complexity")
 subsampling.word_frequency.word_frequency_score(data, "word_frequency")
 subsampling.word_frequency.word_frequency_score(data, "word_zipf_frequency")
-subsampling.misc.apply_subset2evaluate(data, method="precomet_avg")
-subsampling.misc.apply_subset2evaluate(data, method="precomet_var")
-subsampling.misc.apply_subset2evaluate(data, method="precomet_diff")
-subsampling.misc.apply_subset2evaluate(data, method="precomet_diversity")
+subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_avg")
+subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_var")
+subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_diff")
+subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_diversity")
 subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="XCOMET")
 subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="human")
 
@@ -64,7 +64,7 @@ with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
             f"{method_name:>20}",
             f"{results.avg_score:.1f}",
             f"{results.diff_corr:.3f}",
-            f"{results.clusters:.2f}",
+            f"{results.avg_perfect:.1%}".replace("%", "\\%"),
             sep = " & ",
             end=" \\\\\n",
             file=f,
