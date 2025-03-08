@@ -7,7 +7,9 @@ import numpy as np
 
 from difficulty_sampling.data import SrcData, Data
 from subsampling.sentinel import subsample_with_sentinel_src
-from subsampling.word_frequency import subsample_with_word_frequency
+from subsampling.negative_word_frequency import (
+    subsample_with_negative_word_frequency,
+)
 from subsampling.syntactic_complexity import subsample_with_syntactic_complexity
 from subsampling.plot import plot_human_scores_hist
 
@@ -88,8 +90,8 @@ def read_arguments() -> ArgumentParser:
         choices=[
             "sentinel-src-mqm",
             "sentinel-src-da",
-            "word_frequency",
-            "word_zipf_frequency",
+            "negative_word_frequency",
+            "negative_word_zipf_frequency",
             "syntactic_complexity",
             "human",
         ],
@@ -102,6 +104,7 @@ def read_arguments() -> ArgumentParser:
         "--systems-to-filter",
         type=str,
         nargs="+",
+        default=[],
         help="Systems to exclude from the analysis.",
     )
 
@@ -151,14 +154,17 @@ def subsample_command() -> None:
     command = None
     if args.scorer_name in {"sentinel-src-mqm", "sentinel-src-da"}:
         command = subsample_with_sentinel_src
-    elif args.scorer_name in {"word_frequency", "word_zipf_frequency"}:
-        command = subsample_with_word_frequency
+    elif args.scorer_name in {
+        "negative_word_frequency",
+        "negative_word_zipf_frequency",
+    }:
+        command = subsample_with_negative_word_frequency
     elif args.scorer_name == "syntactic_complexity":
         command = subsample_with_syntactic_complexity
     elif args.scorer_name != "human":
         raise ValueError(
             f"Scorer name '{args.scorer_name}' not recognized! Allowed values: 'sentinel-src-mqm', 'sentinel-src-da', "
-            f"'word_frequency', 'word_zipf_frequency', 'syntactic_complexity', 'human'."
+            f"'negative_word_frequency', 'negative_word_zipf_frequency', 'syntactic_complexity', 'human'."
         )
 
     data = (
