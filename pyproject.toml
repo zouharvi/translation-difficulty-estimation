@@ -21,7 +21,7 @@ dependencies = [
   "requests",
   "sentence-transformers",
   "unbabel_comet",
-  "subset2evaluate >= 0.1.0",
+  "subset2evaluate >= 0.1.8",
   "gliner",
   "wordfreq",
 ]

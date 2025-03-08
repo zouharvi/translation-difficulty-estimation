@@ -27,6 +27,7 @@ subsampling.sentinel.sentinel_src_metric_model_score(
     scorer_name="sentinel-src-da",
     data=data, use_tgt_lang_token=False
 )
+subsampling.misc.apply_subset2evaluate(data, method="random")
 subsampling.misc.apply_src_len(data)
 subsampling.syntactic_complexity.syntactic_complexity_score(data, "syntactic_complexity")
 subsampling.word_frequency.word_frequency_score(data, "word_frequency")
@@ -39,6 +40,7 @@ subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="XCO
 subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="human")
 
 METHOD_TO_NAME = {
+    "random": "Random",
     "human": "Oracle",
     "src_len": "Source Length",
     "syntactic_complexity": "Syntactic Complexity",
@@ -70,7 +72,7 @@ with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
 
 
     for method_name in [
-        "human",
+        "random", "human",
         "src_len", "syntactic_complexity", "word_frequency", "word_zipf_frequency",
         "precomet_avg", "precomet_var", "precomet_diff", "precomet_diversity",
         "sentinel-src-da", "sentinel-src-mqm", "artcrowd|GPT-4|human", "artcrowd|GPT-4|XCOMET",
