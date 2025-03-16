@@ -24,7 +24,8 @@ dependencies = [
   "subset2evaluate >= 0.1.8",
   "gliner",
   "wordfreq",
-  "spacy",
+  "spacy >= 3.8.4",
+  "seaborn",
 ]
 classifiers = [
   # prevents upload to PyPi

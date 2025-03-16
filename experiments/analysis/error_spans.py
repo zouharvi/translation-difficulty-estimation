@@ -535,7 +535,7 @@ def error_spans_analysis_command() -> None:
         systems_to_filter = (
             set(args.systems_to_filter) if args.systems_to_filter else set()
         )
-        doc_id2sys_translations, news_lps = dict(), set()
+        doc_id2sys_translations, lps = dict(), set()
         for segment_annotation in data:
             if (
                 (domains != "all" and segment_annotation["domain"] not in domains)
@@ -554,7 +554,7 @@ def error_spans_analysis_command() -> None:
                 doc_id2sys_translations[segment_annotation["doc_id"]][
                     segment_annotation["langs"]
                 ] = dict()
-            news_lps.add(segment_annotation["langs"])
+            lps.add(segment_annotation["langs"])
 
             if (
                 segment_annotation["system"]
@@ -573,7 +573,7 @@ def error_spans_analysis_command() -> None:
         logging.info(
             f"Total number of docs for {domains} domains in wmt24 with ESA annotations: "
             f"{len(doc_id2sys_translations)}\t Total number of language pairs for {domains} domains in wmt24 with ESA "
-            f"annotations: {len(news_lps)}."
+            f"annotations: {len(lps)}."
         )
 
         # Choose analysis based on granularity argument
