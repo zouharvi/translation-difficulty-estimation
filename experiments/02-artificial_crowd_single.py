@@ -37,6 +37,19 @@ metrics.sort(key=lambda metric: np.corrcoef(
     [line["scores"][model]["human"] for data in data_all for line in data for model in models],
 )[0,1], reverse=True)
 
+# print correlations
+for metric in metrics:
+    # average
+    corr_avg = np.corrcoef(
+        [line["scores"]["GPT-4"][metric] for data in data_all for line in data],
+        [line["scores"]["GPT-4"]["human"] for data in data_all for line in data],
+    )[0,1]
+    corr_hum = np.corrcoef(
+        [line["scores"]["refA"][metric] for data in data_all for line in data],
+        [line["scores"]["refA"]["human"] for data in data_all for line in data],
+    )[0,1]
+    print(f"{metric:>50}", f'{corr_hum:.3f}', f'{corr_avg:.3f}')
+
 # %%
 # remove some metrics that are near duplicates
 # metrics.remove("metametrics_mt_mqm_same_source_targ")
