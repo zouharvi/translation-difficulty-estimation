@@ -11,7 +11,7 @@ import difficulty_sampling.utils
 import difficulty_sampling.data
 import subsampling.misc
 
-data = difficulty_sampling.data.Data.load(dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa")
+data = difficulty_sampling.data.Data.load(dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa", include_ref=True)
 
 # models in all data
 data_all = list(data.lp2src_data_list.values())
@@ -37,11 +37,12 @@ metrics.sort(key=lambda metric: np.corrcoef(
     [line["scores"][model]["human"] for data in data_all for line in data for model in models],
 )[0,1], reverse=True)
 
+# %%
 # remove some metrics that are near duplicates
-metrics.remove("metametrics_mt_mqm_same_source_targ")
-metrics.remove("metametrics_mt_mqm_hybrid_kendall")
-metrics.remove("MetricX-24-Hybrid")
-metrics.remove("PrismRefSmall")
+# metrics.remove("metametrics_mt_mqm_same_source_targ")
+# metrics.remove("metametrics_mt_mqm_hybrid_kendall")
+# metrics.remove("MetricX-24-Hybrid")
+# metrics.remove("PrismRefSmall")
 
 results = {}
 # apply scorers to the whole data

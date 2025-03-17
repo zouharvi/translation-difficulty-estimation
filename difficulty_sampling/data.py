@@ -44,6 +44,7 @@ class Data:
         lps: List[str],
         protocol: str,
         domains: Union[str, List[str]] = "all",
+        include_ref: bool = False,
     ):
         """
         Load the data for the given dataset, language pair, protocol and domains
@@ -72,6 +73,7 @@ class Data:
                 langs=lp,
                 normalize=False,
                 file_protocol=protocol,
+                include_ref=include_ref,
             )
             for lp in lps
         }
