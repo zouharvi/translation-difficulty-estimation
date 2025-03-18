@@ -1,5 +1,7 @@
-from typing import Dict, List, Union, TypedDict
+import collections
 import logging
+import numpy as np
+from typing import Dict, List, Union, TypedDict
 
 from difficulty_sampling import wmt24_from_en_lps_esa, wmt24_from_en_lps_mqm
 from difficulty_sampling.utils import load_data_wmt
@@ -99,5 +101,20 @@ class Data:
                     len(next(iter(lp2src_data_list.values())))
                 )
             )
+
+        # add z-normalized human scores
+        for data in lp2src_data_list.values():
+            score_system = collections.defaultdict(list)
+            for line in data:
+                for sys in line["scores"].keys():
+                    score_system[sys].append(line["scores"][sys]["human"])
+            # compute mean and variance
+            score_system = {
+                sys: (np.average(sys_l), np.std(sys_l))
+                for sys, sys_l in score_system.items()
+            }
+            for line in data:
+                for sys in line["scores"].keys():
+                    line["scores"][sys]["human_z"] = (line["scores"][sys]["human"] - score_system[sys][0]) / score_system[sys][1]
 
         return cls(lp2src_data_list, lps, dataset_name, protocol, domains)
