@@ -49,6 +49,8 @@ subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_diversity")
 subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="XCOMET")
 subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="human")
 
+
+# %%
 METHOD_TO_NAME = {
     "random": "Random",
     "human": "Oracle",
@@ -78,6 +80,7 @@ with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
         print(
             f"{method_name:>20}",
             f"{results.avg_score:.1f}",
+            f"{results.avg_score_z:.2f}",
             f"{results.diff_corr:.3f}",
             f"{results.avg_perfect:.1%}".replace("%", "\\%"),
             sep=" & ",
@@ -102,3 +105,4 @@ with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
         "artcrowd|GPT-4|XCOMET",
     ]:
         eval_print_table(method_name)
+
