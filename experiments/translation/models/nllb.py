@@ -19,6 +19,11 @@ class NLLB:
         "Bulgarian": "bul_Cyrl",
         "Dutch": "nld_Latn",
         "Slovene": "slv_Latn",
+        "Czech": "ces_Latn",
+        "Hindi": "hin_Deva",
+        "Icelandic": "isl_Latn",
+        "Japanese": "jpn_Japn",
+        "Ukrainian": "ukr_Cyrl",
     }
 
     def __init__(self, model_name: str):
