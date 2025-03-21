@@ -1,10 +1,13 @@
 import argparse
 import os
+from typing import List, Dict
 
 import difficulty_sampling
-from difficulty_sampling.data import Data, SrcData
-from translating.translation import translate
-from translating.utils import save_translations
+from difficulty_sampling.data import Data
+
+from translation import nllb_models, gemma_models, command_a_models, qwen_models
+from translation.models import gemma3, command_a, nllb, qwen
+from translation.utils import save_translations
 
 
 def read_arguments():
@@ -17,6 +20,23 @@ def read_arguments():
         type=str,
         default="google/gemma-3-1b-it",
         help="The model to use for translation",
+    )
+
+    parser.add_argument(
+        "--target-languages",
+        type=str,
+        nargs="+",
+        default=[
+            "Czech",
+            "Spanish",
+            "Hindi",
+            "Icelandic",
+            "Japanese",
+            "Russian",
+            "Ukrainian",
+            "Chinese",
+        ],
+        help="List of target languages to translate into",
     )
 
     parser.add_argument(
@@ -38,12 +58,43 @@ def read_arguments():
     return parser.parse_args()
 
 
+def translate(
+    sources: List[str],
+    system: str,
+    target_languages: List[str],
+    batch_size: int,
+) -> Dict[str, List[str]]:
+    """
+    Translate the given sources using the given system.
+
+    Args:
+        sources (List[str]): List of sources to translate
+        system (str): The model to use for translation
+        batch_size (int): Number of sources to process in one batch
+
+    Returns:
+        Dict[str, List[str]]: Dictionary containing a list of translations for each target language
+    """
+
+    if system in nllb_models:
+        model = nllb.NLLB(system)
+    elif system in gemma_models:
+        model = gemma3.Gemma3(system)
+    elif system in command_a_models:
+        model = command_a.CommandA(system)
+    elif system in qwen_models:
+        model = qwen.Qwen(system)
+    else:
+        raise ValueError(f"Unknown system: {system}")
+
+    return model.translate(sources, target_languages, batch_size)
+
+
 if __name__ == "__main__":
 
     args = read_arguments()
-    print(args)
 
-    # The English sources in WMT24 are the same across target languages
+    # The English sources in WMT24 are the same across target languages (except from Czech, where there are less sources)
     data = Data.load(
         dataset_name="wmt24",
         lps=["en-es"],
@@ -55,7 +106,9 @@ if __name__ == "__main__":
     print(
         f"Translating {len(sources)} English source segments using system {args.system}"
     )
-    translations = translate(sources, args.system, args.batch_size)
+    translations: Dict[str, List[str]] = translate(
+        sources, args.system, args.target_languages, args.batch_size
+    )
 
     # Save the translations to the specified output directory
     save_translations(translations, sources, args.output_dir, args.system)

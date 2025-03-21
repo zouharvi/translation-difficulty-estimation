@@ -27,6 +27,7 @@ dependencies = [
   "spacy >= 3.8.4",
   "seaborn",
   "transformers @ git+https://github.com/huggingface/transformers@v4.49.0-Gemma-3",
+  "accelerate",
 ]
 classifiers = [
   # prevents upload to PyPi
