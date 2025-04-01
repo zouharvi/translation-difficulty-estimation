@@ -22,7 +22,7 @@ class NLLB:
         "Czech": "ces_Latn",
         "Hindi": "hin_Deva",
         "Icelandic": "isl_Latn",
-        "Japanese": "jpn_Japn",
+        "Japanese": "jpn_Jpan",
         "Ukrainian": "ukr_Cyrl",
     }
 
