@@ -18,7 +18,7 @@ data_all = difficulty_sampling.data.Data.load(
     dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa"
 )
 
-model = sentence_transformers.SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+model = sentence_transformers.SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
 # map tgt to embedding
 tgt2embd = list({
