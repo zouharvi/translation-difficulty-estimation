@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import difficulty_sampling.utils
 import scipy.stats
 import subsampling.sentinel
-
+from fastchrf import pairwise_chrf
 
 data_all = difficulty_sampling.data.Data.load(
     dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa"
@@ -30,15 +30,15 @@ tgt2embd = list({
 tgt2embd = dict(zip(tgt2embd, model.encode(tgt2embd)))
 # %%
 
+def symmetric_chrf(tgt1, tgt2):
+    out = pairwise_chrf([[tgt1], [tgt2]], [[tgt2], [tgt1]])
+    return (out[0][0][0]+out[1][0][0])/2
+
 # compute some protected attributes
-for data in tqdm.tqdm(data_all.lp2src_data_list.values()):
+for data in tqdm.tqdm(list(data_all.lp2src_data_list.values())):
     for line in data:
-        output_identical = np.average([
-            tgt1 == tgt2
-            for (sys1, tgt1), (sys2, tgt2) in itertools.product(line["tgt"].items(), line["tgt"].items())
-            if sys1 != sys2
-        ])
-        output_diversity = np.average([
+        output_unique = len({tgt for tgt in line["tgt"].values()})/len(line["tgt"])
+        output_diversity_ip = np.average([
             # cosine similarity
             sentence_transformers.util.pytorch_cos_sim(
                 tgt2embd[tgt1], tgt2embd[tgt2]
@@ -46,11 +46,19 @@ for data in tqdm.tqdm(data_all.lp2src_data_list.values()):
             for (sys1, tgt1), (sys2, tgt2) in itertools.product(line["tgt"].items(), line["tgt"].items())
             if sys1 != sys2
         ])
+        output_diversity_chrf = np.average([
+            100-symmetric_chrf(tgt1, tgt2)
+            for (sys1, tgt1), (sys2, tgt2) in itertools.product(line["tgt"].items(), line["tgt"].items())
+            if sys1 != sys2
+        ])
         line["effect"] = {
-            "output_diversity": output_diversity,
-            "output_identical": output_identical,
+            "output_diversity_ip": output_diversity_ip,
+            "output_diversity_chrf": output_diversity_chrf,
+            "output_unique": output_unique,
             "length": len(line["src"]),
         }
+
+# %%
 
 subsampling.sentinel.sentinel_src_metric_model_score(
     subsampling.sentinel.get_sentinel_src_metric_model("sapienzanlp/sentinel-src-mqm"),
@@ -126,7 +134,7 @@ def plot_problem(ax, data_x, data_y, key_x, key_y):
     )
 
 def plot_method(method_name):
-    fig, axs = plt.subplots(1, 3, figsize=(10, 3.5))
+    fig, axs = plt.subplots(1, 4, figsize=(12, 3.5))
 
     plot_problem(
         axs[0],
@@ -138,17 +146,25 @@ def plot_method(method_name):
 
     plot_problem(
         axs[1],
-        avg_effect_across_langs("output_identical"),
+        avg_effect_across_langs("output_unique"),
         avg_difficulty_across_langs(method_name),
-        key_x="% output identical",
+        key_x="% output unique",
         key_y=method_name,
     )
 
     plot_problem(
         axs[2],
-        avg_effect_across_langs("output_diversity"),
+        avg_effect_across_langs("output_diversity_ip"),
         avg_difficulty_across_langs(method_name),
-        key_x="output diversity",
+        key_x="output diversity (embd)",
+        key_y=method_name,
+    )
+
+    plot_problem(
+        axs[3],
+        avg_effect_across_langs("output_diversity_chrf"),
+        avg_difficulty_across_langs(method_name),
+        key_x="output diversity (chrf)",
         key_y=method_name,
     )
 
@@ -164,5 +180,5 @@ plot_method("precomet_avg")
 plot_method("precomet_var")
 plot_method("precomet_diff")
 plot_method("precomet_diversity")
-plot_method("random")
 plot_method("src_len")
+plot_method("random")
