@@ -2,7 +2,7 @@
 We piggy-back on top of subset2evaluate for now. This might change later.
 """
 
-from typing import Callable, List
+from typing import Callable, List, Optional
 import subset2evaluate.evaluate
 import collections
 import numpy as np
@@ -12,7 +12,7 @@ import numpy as np
 eval_clu_cor = subset2evaluate.evaluate.eval_clucor
 
 MainResult = collections.namedtuple(
-    "MainResult", ["avg_score", "avg_score_z", "diff_corr", "avg_perfect"]
+    "MainResult", ["avg_score", "avg_diff", "diff_corr", "avg_perfect"]
 )
 
 
@@ -36,7 +36,7 @@ def main_eval(
         for sys in line["scores"].keys()
     ])
 
-    result_avg_score_z = np.average([
+    result_avg_diff = np.average([
         line["scores"][sys]["human_z"]
         for line in data_new
         for sys in line["scores"].keys()
@@ -58,7 +58,7 @@ def main_eval(
 
     return MainResult(
         avg_score=result_avg_score,
-        avg_score_z=result_avg_score_z,
+        avg_diff=result_avg_diff,
         diff_corr=result_diff_corr,
         avg_perfect=result_avg_perfect,
     )
@@ -67,21 +67,26 @@ def main_eval(
 def main_eval_avg(
     method_fn: Callable,
     data: List,
-    B: int = 100,
+    B: Optional[int] = None,
+    p: Optional[float] = None,
 ):
     """
     TODO description
     """
+    assert B is not None or p is not None, "Either B or p must be specified"
 
     results = []
 
     for data in data.lp2src_data_list.values():
-        results.append(main_eval(data, method_fn, B))
+        if B is not None:
+            results.append(main_eval(data, method_fn, B))
+        elif p is not None:
+            results.append(main_eval(data, method_fn, int(len(data)*p)))
 
     # average results
     return MainResult(
         avg_score=np.average([x.avg_score for x in results]),
-        avg_score_z=np.average([x.avg_score_z for x in results]),
+        avg_diff=np.average([x.avg_diff for x in results]),
         diff_corr=np.average([x.diff_corr for x in results]),
         avg_perfect=np.average([x.avg_perfect for x in results]),
     )
