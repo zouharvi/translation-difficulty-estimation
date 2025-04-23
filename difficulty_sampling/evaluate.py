@@ -153,9 +153,10 @@ def get_round_robin_sorted_src_data_ids(
 def main_eval_avg(
     method_name: str,
     data: Data,
-    budget: int = 100,
     single_src_subset: bool = False,
     is_method_tgt_lang_dep: bool = False,
+    budget: Optional[int] = None,
+    proportion: Optional[float] = None,
 ) -> MainResult:
     """
     Run the subset difficulty evaluation on the input data using the input method for subsampling.
@@ -163,28 +164,46 @@ def main_eval_avg(
     Args:
         method_name: Name of the method whose scores will be used for subsampling.
         data: Data to use for evaluation.
-        budget: Number of source texts to maintain in the sampled subset.
         single_src_subset: Whether to use a shared source text subset across language pairs. Default: False.
         is_method_tgt_lang_dep: Method is tgt lang dependent. Used only if `single_src_subset` is True. Default: False.
+        budget: Number of source texts to maintain in the sampled subset. Default: None.
+        proportion: Proportion of source texts to maintain in the sampled subset. Default: None.
 
     Returns:
         MainResult: Evaluation results with macro `AvgScore`, `AvgScore-z`, `DiffCorr`, and `% Perfect`.
     """
-    results = []
+    if budget is None and proportion is None:
+        raise ValueError("Either budget or proportion must be specified!")
 
+    results = []
     if single_src_subset and is_method_tgt_lang_dep:
         sorted_src_data_ids = get_round_robin_sorted_src_data_ids(
             data.lp2src_data_list, method_name
         )
         for src_data_list in data.lp2src_data_list.values():
             results.append(
-                main_eval(src_data_list, method_name, budget, sorted_src_data_ids)
+                main_eval(
+                    src_data_list,
+                    method_name,
+                    budget
+                    if budget is not None
+                    else int(len(src_data_list) * proportion),
+                    sorted_src_data_ids,
+                )
             )
     else:
         for src_data_list in data.lp2src_data_list.values():
-            results.append(main_eval(src_data_list, method_name, budget))
+            results.append(
+                main_eval(
+                    src_data_list,
+                    method_name,
+                    budget
+                    if budget is not None
+                    else int(len(src_data_list) * proportion),
+                )
+            )
 
-    # average results
+    # Average results per language pair.
     return MainResult(
         avg_score=np.average([r.avg_score for r in results]),
         avg_score_z=np.average([r.avg_score_z for r in results]),

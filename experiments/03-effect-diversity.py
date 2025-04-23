@@ -28,6 +28,18 @@ tgt2embd = list({
     for tgt in line["tgt"].values()
 })
 tgt2embd = dict(zip(tgt2embd, model.encode(tgt2embd)))
+
+# %%
+import language_tool_python
+grammarcheck = language_tool_python.LanguageTool('en-US')
+src2error = list({
+    line["src"]
+    for data in data_all.lp2src_data_list.values()
+    for line in data
+})
+src2error = {src: len(grammarcheck.check(src))/len(src.split()) for src in src2error}
+grammarcheck.close()
+
 # %%
 
 def symmetric_chrf(tgt1, tgt2):
@@ -55,6 +67,7 @@ for data in tqdm.tqdm(list(data_all.lp2src_data_list.values())):
             "output_diversity_ip": output_diversity_ip,
             "output_diversity_chrf": output_diversity_chrf,
             "output_unique": output_unique,
+            "grammaticality": src2error[line["src"]],
             "length": len(line["src"]),
         }
 
@@ -134,7 +147,7 @@ def plot_problem(ax, data_x, data_y, key_x, key_y):
     )
 
 def plot_method(method_name):
-    fig, axs = plt.subplots(1, 4, figsize=(12, 3.5))
+    fig, axs = plt.subplots(1, 5, figsize=(14, 3.5))
 
     plot_problem(
         axs[0],
@@ -165,6 +178,14 @@ def plot_method(method_name):
         avg_effect_across_langs("output_diversity_chrf"),
         avg_difficulty_across_langs(method_name),
         key_x="output diversity (chrf)",
+        key_y=method_name,
+    )
+
+    plot_problem(
+        axs[4],
+        avg_effect_across_langs("grammaticality"),
+        avg_difficulty_across_langs(method_name),
+        key_x="grammar errors per word",
         key_y=method_name,
     )
 
