@@ -16,6 +16,9 @@ import subsampling.negative_word_frequency
 import subsampling.misc
 
 
+SINGLE_SRC_SUBSET = False
+
+
 data = difficulty_sampling.data.Data.load(
     dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa"
 )
@@ -77,21 +80,21 @@ subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="hum
 subsampling.misc.apply_external_artificial_crowd_metrics(
     data,
     sys2translations_path=Path(
-        "../data/artificial_crowd/scored_translations/sys2translations.pickle"
+        "../data/external_artificial_crowd/scored_translations/sys2translations.pickle"
     ),
-    metric="MetricX-24-Hybrid-XXL",
+    metric="MetricX-24-Hybrid-QE-XXL",
 )
 subsampling.misc.apply_external_artificial_crowd_metrics(
     data,
     sys2translations_path=Path(
-        "../data/artificial_crowd/scored_translations/sys2translations.pickle"
+        "../data/external_artificial_crowd/scored_translations/sys2translations.pickle"
     ),
-    metric="XCOMET-XXL",
+    metric="XCOMET-QE-XXL",
 )
 subsampling.misc.apply_external_artificial_crowd_metrics(
     data,
     sys2translations_path=Path(
-        "../data/artificial_crowd/scored_translations/sys2translations.pickle"
+        "../data/external_artificial_crowd/scored_translations/sys2translations.pickle"
     ),
     metric="CometKiwi-XXL",
 )
@@ -158,22 +161,28 @@ METHOD_TO_NAME = {
     "sentinel-src-da": "Sentinel-DA",
     "artcrowd|GPT-4|human": "Artificial Crowd (Oracle)",
     "artcrowd|GPT-4|XCOMET": "Artificial Crowd (XCOMET)",
-    "ext_artcrowd|MetricX-24-Hybrid-XXL": "External Artificial Crowd (MetricX-24-Hybrid-XXL)",
-    "ext_artcrowd|XCOMET-XXL": "External Artificial Crowd (XCOMET-XXL)",
+    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "External Artificial Crowd (MetricX-24-Hybrid-QE-XXL)",
+    "ext_artcrowd|XCOMET-QE-XXL": "External Artificial Crowd (XCOMET-QE-XXL)",
     "ext_artcrowd|CometKiwi-XXL": "External Artificial Crowd (CometKiwi-XXL)",
 }
 
-with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
+with open(
+    difficulty_sampling.ROOT
+    / f"generated/{'01-gen_mt_like_eval.tex' if SINGLE_SRC_SUBSET else '01-eval_all.tex'}",
+    "w",
+) as f:
 
-    def eval_print_table(method_name, B=100):
+    def eval_print_table(method_name, is_method_tgt_lang_dep, budget=100):
         results = difficulty_sampling.evaluate.main_eval_avg(
-            method_name, data=data, B=B
+            method_name,
+            data=data,
+            budget=budget,
+            single_src_subset=SINGLE_SRC_SUBSET,
+            is_method_tgt_lang_dep=is_method_tgt_lang_dep,
         )
-        method_name = METHOD_TO_NAME.get(
-            method_name, method_name.replace("_", " ").title()
-        )
+        method_name = METHOD_TO_NAME.get(method_name, method_name.replace("_", " "))
         print(
-            f"{method_name:>20}",
+            f"{method_name:>20}{'*' if is_method_tgt_lang_dep else ''}",
             f"{results.avg_score:.1f}",
             f"{results.avg_score_z:.2f}",
             f"{results.diff_corr:.3f}",
@@ -183,32 +192,32 @@ with open(difficulty_sampling.ROOT / "generated/01-eval_all.tex", "w") as f:
             file=f,
         )
 
-    for method_name in [
-        "random",
-        "human",
-        "src_len",
-        "syntactic_complexity",
-        "negative_word_frequency",
-        "negative_word_zipf_frequency",
-        "precomet_avg",
-        "precomet_var",
-        "precomet_diff",
-        "precomet_diversity",
-        "sentinel-src-da",
-        "sentinel-src-mqm",
-        "sentinel-src-mqm-tgt-lang",
-        "sentinel-src-mqm-lin-tgt-lang",
-        "sentinel-src-mqm-znorm-per-rater-tgt-lang",
-        "artcrowd|GPT-4|human",
-        "artcrowd|GPT-4|XCOMET",
-        "ext_artcrowd|MetricX-24-Hybrid-XXL",
-        "ext_artcrowd|XCOMET-XXL",
-        "ext_artcrowd|CometKiwi-XXL",
-        "LLM-as-a-Judge (Command-A_old, src-based)",
-        "LLM-as-a-Judge (Command-A_old, tgt-based)",
-        "LLM-as-a-Judge (Command-A_new, src-based)",
-        "LLM-as-a-Judge (Command-A_new, tgt-based)",
-        "LLM-as-a-Judge (GPT-4o, src-based)",
-        "LLM-as-a-Judge (GPT-4o, tgt-based)",
+    for method_name, is_method_tgt_lang_dep in [
+        ("random", False),
+        ("human", True),
+        ("src_len", False),
+        ("syntactic_complexity", False),
+        ("negative_word_frequency", False),
+        ("negative_word_zipf_frequency", False),
+        ("precomet_avg", False),
+        ("precomet_var", False),
+        ("precomet_diff", False),
+        ("precomet_diversity", False),
+        ("sentinel-src-da", False),
+        ("sentinel-src-mqm", False),
+        ("sentinel-src-mqm-tgt-lang", True),
+        ("sentinel-src-mqm-lin-tgt-lang", True),
+        ("sentinel-src-mqm-znorm-per-rater-tgt-lang", True),
+        ("artcrowd|GPT-4|human", True),
+        ("artcrowd|GPT-4|XCOMET", True),
+        ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", True),
+        ("ext_artcrowd|XCOMET-QE-XXL", True),
+        ("ext_artcrowd|CometKiwi-XXL", True),
+        ("LLM-as-a-Judge (Command-A_old, src-based)", False),
+        ("LLM-as-a-Judge (Command-A_old, tgt-based)", True),
+        ("LLM-as-a-Judge (Command-A_new, src-based)", False),
+        ("LLM-as-a-Judge (Command-A_new, tgt-based)", True),
+        ("LLM-as-a-Judge (GPT-4o, src-based)", False),
+        ("LLM-as-a-Judge (GPT-4o, tgt-based)", True),
     ]:
-        eval_print_table(method_name)
+        eval_print_table(method_name, is_method_tgt_lang_dep)

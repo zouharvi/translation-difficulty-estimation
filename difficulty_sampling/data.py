@@ -1,9 +1,8 @@
 import collections
 import logging
 import numpy as np
-from typing import Dict, List, Union, TypedDict
+from typing import Dict, List, Union, TypedDict, Optional
 
-from difficulty_sampling import wmt24_from_en_lps_esa, wmt24_from_en_lps_mqm
 from difficulty_sampling.utils import load_data_wmt
 
 
@@ -57,7 +56,11 @@ class Data:
             protocol (str): Protocol used for evaluation (e.g., esa, mqm, ...)
             domains (Union[str, List[str]], optional): List of domains to analyze (e.g., ['news']). Defaults to "all".
         """
-        assert protocol is not None, "You need to specify the protocol, such as 'esa', 'da' or 'mqm'."
+        from difficulty_sampling import wmt24_from_en_lps_esa, wmt24_from_en_lps_mqm
+
+        assert (
+            protocol is not None
+        ), "You need to specify the protocol, such as 'esa', 'da' or 'mqm'."
 
         if lps == ["en-x"]:
             dataset_name, lps = (
@@ -115,6 +118,35 @@ class Data:
             }
             for line in data:
                 for sys in line["scores"].keys():
-                    line["scores"][sys]["human_z"] = (line["scores"][sys]["human"] - score_system[sys][0]) / score_system[sys][1]
+                    line["scores"][sys]["human_z"] = (
+                        line["scores"][sys]["human"] - score_system[sys][0]
+                    ) / score_system[sys][1]
 
         return cls(lp2src_data_list, lps, dataset_name, protocol, domains)
+
+
+def get_src_score(
+    src_data: SrcData, scorer_name: str, systems_to_filter: Optional[List[str]] = None
+) -> float:
+    """
+    Return the score assigned by the input scorer to the src data.
+
+    Args:
+        src_data (SrcData): SrcData Dictionary containing all the info for a given src segment.
+        scorer_name (str): Name of the scorer to use to extract the score from the data.
+        systems_to_filter (Optional[List[str]]): Sys to exclude from the analysis (used iff `scorer_name` is `'human'`).
+
+    Returns:
+        score (float): Score assigned by the input scorer to the src data.
+    """
+    scores: Dict[str, Dict[str, float]] = src_data["scores"]  # More explicit typing
+
+    if scorer_name == "human":
+        human_scores_sum, n_sys = 0, 0
+        for sys in scores:
+            if systems_to_filter is None or sys not in systems_to_filter:
+                human_scores_sum += scores[sys]["human"]
+                n_sys += 1
+        return human_scores_sum / n_sys
+
+    return scores[next(iter(scores))][scorer_name]

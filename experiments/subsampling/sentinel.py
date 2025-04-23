@@ -62,8 +62,8 @@ def sentinel_src_metric_model_score(
     """
     if sentinel_src_metric_model.hparams.target_languages and not use_tgt_lang_token:
         raise ValueError(
-            "The employed sentinel-src metric model was trained with target language token, but the '--use-tgt-lang' "
-            "flag has not been set!"
+            "The employed sentinel-src metric model was trained with target language special tokens, but the "
+            "`use_tgt_lang_token` input argument has been set to False!"
         )
     if use_tgt_lang_token:
         scores = dict()

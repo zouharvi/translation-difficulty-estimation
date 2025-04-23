@@ -1,11 +1,10 @@
 import logging
-from typing import Dict, List, Optional
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 import numpy as np
 
-from difficulty_sampling.data import SrcData, Data
+from difficulty_sampling.data import Data, get_src_score
 from subsampling.sentinel import subsample_with_sentinel_src
 from subsampling.negative_word_frequency import (
     subsample_with_negative_word_frequency,
@@ -116,33 +115,6 @@ def read_arguments() -> ArgumentParser:
     )
 
     return parser
-
-
-def get_src_score(
-    src_data: SrcData, scorer_name: str, systems_to_filter: Optional[List[str]] = None
-) -> float:
-    """
-    Return the score assigned by the input scorer to the src data.
-
-    Args:
-        src_data (SrcData): SrcData Dictionary containing all the info for a given src segment.
-        scorer_name (str): Name of the scorer to use to extract the score from the data.
-        systems_to_filter (Optional[List[str]]): Sys to exclude from the analysis (used iff `scorer_name` is `'human'`).
-
-    Returns:
-        score (float): Score assigned by the input scorer to the src data.
-    """
-    scores: Dict[str, Dict[str, float]] = src_data["scores"]  # More explicit typing
-
-    if scorer_name == "human":
-        human_scores_sum, n_sys = 0, 0
-        for sys in scores:
-            if sys not in systems_to_filter:
-                human_scores_sum += scores[sys]["human"]
-                n_sys += 1
-        return human_scores_sum / n_sys
-
-    return scores[next(iter(scores))][scorer_name]
 
 
 def subsample_command() -> None:

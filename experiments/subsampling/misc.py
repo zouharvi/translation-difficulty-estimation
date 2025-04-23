@@ -65,7 +65,7 @@ def apply_artificial_crowd_metrics(data, model, metric):
 def apply_external_artificial_crowd_metrics(
     data: Data,
     sys2translations_path: Path,
-    metric: Literal["MetricX-24-Hybrid-XXL", "XCOMET-XXL", "CometKiwi-XXL"],
+    metric: Literal["MetricX-24-Hybrid-QE-XXL", "XCOMET-QE-XXL", "CometKiwi-XXL"],
 ) -> None:
     """
     Add External Artificial Crowd scores to the input data.
@@ -76,12 +76,12 @@ def apply_external_artificial_crowd_metrics(
         metric: QE metric to use for the External Artificial Crowd scores.
     """
     if (
-        metric != "MetricX-24-Hybrid-XXL"
-        and metric != "XCOMET-XXL"
+        metric != "MetricX-24-Hybrid-QE-XXL"
+        and metric != "XCOMET-QE-XXL"
         and metric != "CometKiwi-XXL"
     ):
         raise ValueError(
-            f"Invalid metric '{metric}'! The metric must be one of 'MetricX-24-Hybrid-XXL', 'XCOMET-XXL', or "
+            f"Invalid metric '{metric}'! The metric must be one of 'MetricX-24-Hybrid-QE-XXL', 'XCOMET-QE-XXL', or "
             "'CometKiwi-XXL'."
         )
 
@@ -98,20 +98,20 @@ def apply_external_artificial_crowd_metrics(
                 if len(lp2artificial_crowd_metric_scores[lp]) <= seg_idx:
                     lp2artificial_crowd_metric_scores[lp].append(
                         {
-                            "MetricX-24-Hybrid-XXL": [
+                            "MetricX-24-Hybrid-QE-XXL": [
                                 score_dict["metricx24-hybrid-qe_score"]
                             ],
-                            "XCOMET-XXL": [score_dict["xcomet-qe_score"]],
+                            "XCOMET-QE-XXL": [score_dict["xcomet-qe_score"]],
                             "CometKiwi-XXL": [score_dict["cometkiwi-xxl_score"]],
                         }
                     )
                 else:
                     lp2artificial_crowd_metric_scores[lp][seg_idx][
-                        "MetricX-24-Hybrid-XXL"
+                        "MetricX-24-Hybrid-QE-XXL"
                     ].append(score_dict["metricx24-hybrid-qe_score"])
-                    lp2artificial_crowd_metric_scores[lp][seg_idx]["XCOMET-XXL"].append(
-                        score_dict["xcomet-qe_score"]
-                    )
+                    lp2artificial_crowd_metric_scores[lp][seg_idx][
+                        "XCOMET-QE-XXL"
+                    ].append(score_dict["xcomet-qe_score"])
                     lp2artificial_crowd_metric_scores[lp][seg_idx][
                         "CometKiwi-XXL"
                     ].append(score_dict["cometkiwi-xxl_score"])

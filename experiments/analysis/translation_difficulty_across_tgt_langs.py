@@ -156,12 +156,12 @@ def compute_correlation_matrix(
         np.ndarray: The computed correlation matrix.
         List[str]: The list of annotation string names.
     """
+    correlation_func = get_correlation_function(correlation_method)
+
     annotations = sorted(
         annotation_id2src_data_list.keys()
     )  # Get all annotation string names
     num_annotations = len(annotations)
-
-    correlation_func = get_correlation_function(correlation_method)
     annotation2avg_human_scores = {annotation_id: [] for annotation_id in annotations}
 
     n_sources = 0
@@ -482,9 +482,18 @@ def save_correlation_plot(
     axes_name: str,
     output_path: Path,
     correlation_method: str,
+    measure: str = "Difficulty",
 ) -> None:
     """
     Saves the correlation matrix as a heatmap plot.
+
+    Args:
+        correlation_matrix: Correlation matrix to plot.
+        axes: String names for the axes.
+        axes_name: Name of the axes.
+        output_path: Path to save the plot.
+        correlation_method: Correlation method used.
+        measure: Name of the measure. Default: "Difficulty".
     """
     plt.figure(figsize=(10, 8))
     sns.heatmap(
@@ -498,7 +507,7 @@ def save_correlation_plot(
         vmax=1,
     )
     plt.title(
-        f"{correlation_method.capitalize()} Correlation Matrix for Source Text Difficulty Scores"
+        f"{correlation_method.capitalize()} Correlation Matrix for Source Text {measure} Scores"
     )
     plt.xlabel(axes_name)
     plt.ylabel(axes_name)
@@ -511,6 +520,9 @@ def save_correlation_plot(
 
 
 def translation_difficulty_across_tgt_langs_command() -> None:
+    """
+    Command to compute and save on a file the translation difficulty correlation matrix across en-x target languages.
+    """
     args: Namespace = read_arguments().parse_args()
 
     if args.compute_upper_bounds:
