@@ -96,7 +96,7 @@ for method, method_name in METHOD_TO_NAME.items():
     )
     axs[1, 0].plot(
         data_x,
-        [y.avg_diff for y in data_y],
+        [y.avg_score_z for y in data_y],
         label=method_name,
     )
     axs[1, 1].plot(
