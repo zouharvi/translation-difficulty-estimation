@@ -47,6 +47,7 @@ def syntactic_complexity_score(
     data: Data,
     scorer_name: str = "syntactic_complexity",
     model_name: str = "en_core_web_sm",
+    score_all_source_texts: bool = False,
 ) -> Data:
     """
     Score the input data using a syntactic structure complexity metric based on dependency tree height.
@@ -58,30 +59,38 @@ def syntactic_complexity_score(
     The computed score is added to each sample's scores for every MT system.
 
     Args:
-        data (Data): Data to score.
-        scorer_name (str): Name to assign to the syntactic complexity score. Default: "syntactic_complexity".
-        model_name (str): spaCy model to use for dependency parsing. Default: "en_core_web_sm".
+        data: Data to score.
+        scorer_name: Name to assign to the syntactic complexity score. Default: "syntactic_complexity".
+        model_name: spaCy model to use for dependency parsing. Default: "en_core_web_sm".
+        score_all_source_texts: If True, score all source texts regardless of language pair. Default: False.
 
     Returns:
-        Data: The input data with an additional score (scorer_name) for each MT system.
+        Data: The input data with an additional score (`scorer_name`) for each MT system.
     """
     logger.info(f"Loading spaCy model: {model_name}.")
     nlp = spacy.load(model_name)
 
-    scores = []
-    logger.info("Computing syntactic complexity scores for each source sentence...")
-    for sample in next(iter(data.lp2src_data_list.values())):
-        doc = nlp(sample["src"])
-        height = compute_dependency_tree_height(doc)
-        scores.append(-height)
+    src_lang2scores = (
+        {lp.split("-")[0]: [] for lp in data.lps}
+        if not score_all_source_texts
+        else None
+    )
 
-    # Since this is a source-based metric, the same score applies for all systems.
+    logger.info("Computing syntactic complexity scores for each source text...")
     for lp, src_data_list in data.lp2src_data_list.items():
-        assert len(scores) == len(src_data_list)
-        for idx, sample in enumerate(src_data_list):
-            for system in sample["scores"]:
-                sample["scores"][system][scorer_name] = scores[idx]
-
+        src_lang = lp.split("-")[0]
+        for src_idx, sample in enumerate(src_data_list):
+            if not score_all_source_texts and len(src_lang2scores[src_lang]) > src_idx:
+                for scorer_name2score in sample["scores"].values():
+                    scorer_name2score[scorer_name] = src_lang2scores[src_lang][src_idx]
+            else:
+                doc = nlp(sample["src"])
+                height = compute_dependency_tree_height(doc)
+                score = -height
+                for scorer_name2score in sample["scores"].values():
+                    scorer_name2score[scorer_name] = score
+                if not score_all_source_texts:
+                    src_lang2scores[src_lang].append(score)
     logger.info("Syntactic complexity scoring complete.")
 
     return data

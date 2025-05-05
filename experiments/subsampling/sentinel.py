@@ -46,53 +46,62 @@ def sentinel_src_metric_model_score(
     batch_size: int = 32,
     scorer_name: str = "sentinel-src-mqm",
     use_tgt_lang_token: bool = False,
+    score_all_source_texts: bool = False,
+    gpus: int = 1,
 ) -> Data:
     """
     Score the input data with the input sentinel-src metric model, adding "sentinel_src" to their available scores.
 
     Args:
-        sentinel_src_metric_model (sentinel_metric.models.SentinelRegressionMetric): Sentinel-src metric model to use.
-        data (Data): Data to score.
-        batch_size (int): Batch size to use for the inference with the input sentinel-src metric model. Default: 32.
-        scorer_name (str): Name to use to identify the sentinel-src metric model used. Default: 'sentinel-src-mqm'.
-        use_tgt_lang_token (bool): Whether to use the target language token in the input data. Default: False.
+        sentinel_src_metric_model: Sentinel-src metric model to use.
+        data: Data to score.
+        batch_size: Batch size to use for the inference with the input sentinel-src metric model. Default: 32.
+        scorer_name: Name to use to identify the sentinel-src metric model used. Default: 'sentinel-src-mqm'.
+        use_tgt_lang_token: Whether to use the target language token in the input data. Default: False.
+        score_all_source_texts: If True, score all source texts regardless of language pair. Default: False.
+        gpus: Number of GPUs to use for the inference with the input sentinel-src metric model. Default: 1.
 
     Returns:
-        scored_data (Data): Input data with "sentinel_src" as additional available score for each MT system.
+        scored_data: Input data with `scorer_name` as an additional available score for each MT system.
     """
     if sentinel_src_metric_model.hparams.target_languages and not use_tgt_lang_token:
         raise ValueError(
             "The employed sentinel-src metric model was trained with target language special tokens, but the "
             "`use_tgt_lang_token` input argument has been set to False!"
         )
-    if use_tgt_lang_token:
-        scores = dict()
+
+    lang2scores = dict()
+    if use_tgt_lang_token or score_all_source_texts:
         for lp, src_data_list in data.lp2src_data_list.items():
-            scores[lp] = sentinel_src_metric_model.predict(
+            lang2scores[lp] = sentinel_src_metric_model.predict(
                 [{"src": sample["src"], "lp": lp} for sample in src_data_list],
                 batch_size=batch_size,
-                gpus=1,
+                gpus=gpus,
             ).scores
-        assert set(scores) == set(data.lp2src_data_list)
     else:
-        scores = sentinel_src_metric_model.predict(
-            [
-                {"src": sample["src"]}
-                for sample in next(iter(data.lp2src_data_list.values()))
-            ],
-            batch_size=batch_size,
-            gpus=1,
-        ).scores
+        for lp, src_data_list in data.lp2src_data_list.items():
+            src_lang = lp.split("-")[0]
+            if src_lang in lang2scores:
+                continue
+            lang2scores[src_lang] = sentinel_src_metric_model.predict(
+                [{"src": sample["src"]} for sample in src_data_list],
+                batch_size=batch_size,
+                gpus=gpus,
+            ).scores
 
     for lp, src_data_list in data.lp2src_data_list.items():
-        assert len(src_data_list) == (
-            len(scores) if isinstance(scores, list) else len(scores[lp])
+        assert len(src_data_list) == len(
+            lang2scores[
+                lp if use_tgt_lang_token or score_all_source_texts else lp.split("-")[0]
+            ]
         )
         for idx, sample in enumerate(src_data_list):
-            for system in sample["scores"]:
-                sample["scores"][system][scorer_name] = (
-                    scores[idx] if isinstance(scores, list) else scores[lp][idx]
-                )
+            for scorer_name2score in sample["scores"].values():
+                scorer_name2score[scorer_name] = lang2scores[
+                    lp
+                    if use_tgt_lang_token or score_all_source_texts
+                    else lp.split("-")[0]
+                ]
 
     return data
 

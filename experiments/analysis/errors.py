@@ -40,7 +40,7 @@ class EsaAnnotation(TypedDict, total=False):
 
 def read_arguments() -> ArgumentParser:
     parser = ArgumentParser(
-        description="Command to perform the error spans analysis on WMT24 submissions for the news domain."
+        description="Command to perform the errors analysis on WMT24 submissions."
     )
 
     parser.add_argument(
@@ -513,9 +513,9 @@ def plot_item_classes(
     plt.close(fig)
 
 
-def error_spans_analysis_command() -> None:
+def errors_analysis_command() -> None:
     """
-    Command to perform the error spans analysis on WMT24 submissions for the news domain.
+    Command to perform the errors analysis on WMT24 submissions.
     """
     args = read_arguments().parse_args()
 
@@ -576,7 +576,7 @@ def error_spans_analysis_command() -> None:
             f"annotations: {len(lps)}."
         )
 
-        # Choose analysis based on granularity argument
+        # Choose analysis based on the `granularity` argument
         if args.granularity == "document":
             analysis_res = analyze_docs_condition(
                 doc_id2sys_translations,
@@ -600,4 +600,4 @@ def error_spans_analysis_command() -> None:
 
 
 if __name__ == "__main__":
-    error_spans_analysis_command()
+    errors_analysis_command()

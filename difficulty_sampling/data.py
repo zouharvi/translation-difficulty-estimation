@@ -1,8 +1,12 @@
 import collections
+import json
 import logging
+
+from mt_metrics_eval.data import EvalSet
 import numpy as np
 from typing import Dict, List, Union, TypedDict, Optional
 
+from difficulty_sampling import WMT24_GENMT_DATA
 from difficulty_sampling.utils import load_data_wmt
 
 
@@ -81,7 +85,109 @@ class Data:
                 include_ref=include_ref,
             )
             for lp in lps
+            if lp != "en-cs"
         }
+
+        if "en-cs" in lps:
+            line_id2annotated_translations = collections.defaultdict(list)
+            with WMT24_GENMT_DATA.open(encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    annotated_translation = json.loads(line)
+                    if annotated_translation["langs"] == "en-cs":
+                        line_id2annotated_translations[
+                            annotated_translation["line_id"]
+                        ].append(annotated_translation)
+
+            wmt_metrics_eval_set = EvalSet("wmt24", "en-cs", True)
+            metric_name2seg_scores = dict()
+            for metric_name in wmt_metrics_eval_set.metric_names:
+                metric_name2seg_scores[
+                    wmt_metrics_eval_set.BaseMetric(metric_name)
+                ] = wmt_metrics_eval_set.Scores("seg", metric_name)
+
+            encs_data = []
+            for line_id_true, (line_id, annotated_translations) in enumerate(
+                sorted(line_id2annotated_translations.items())
+            ):
+                assert (
+                    len(set(a["src"] for a in annotated_translations))
+                    == len(set(a["domain"] for a in annotated_translations))
+                    == len(set(a["doc_id"] for a in annotated_translations))
+                    == 1
+                )
+
+                word_count = len(annotated_translations[0]["src"].split())
+
+                new_sample = {
+                    "i": line_id_true,
+                    "src": annotated_translations[0]["src"],
+                    "ref": wmt_metrics_eval_set.all_refs[wmt_metrics_eval_set.std_ref][
+                        line_id
+                    ],
+                    "cost": 0.15 * word_count + 33.7,
+                    "domain": annotated_translations[0]["domain"],
+                    "doc": annotated_translations[0]["doc_id"],
+                }
+
+                sys2annotations = dict()
+                for annotation_dict in annotated_translations:
+                    if annotation_dict["system"] == "refA":
+                        continue
+
+                    sys = (
+                        "IOL_Research"
+                        if annotation_dict["system"] == "IOL-Research"
+                        else annotation_dict["system"]
+                    )
+
+                    if sys not in sys2annotations:
+                        assert annotation_dict["tgt"] is not None
+                        sys2annotations[sys] = (
+                            annotation_dict["tgt"],
+                            [float(annotation_dict["esa_score"])],
+                        )
+                    else:
+                        assert sys2annotations[sys][0] == annotation_dict["tgt"]
+                        sys2annotations[sys][1].append(
+                            float(annotation_dict["esa_score"])
+                        )
+
+                new_sample["tgt"], new_sample["scores"] = dict(), dict()
+                for sys, (tgt, scores) in sys2annotations.items():
+                    new_sample["tgt"][sys] = tgt
+
+                    new_sample["scores"][sys] = {"human": sum(scores) / len(scores)}
+
+                    for (
+                        metric_name,
+                        sys2metric_scores,
+                    ) in metric_name2seg_scores.items():
+                        assert sys2metric_scores[sys][line_id] is not None
+                        new_sample["scores"][sys][metric_name] = sys2metric_scores[sys][
+                            line_id
+                        ]
+
+                assert len(new_sample["tgt"]) == len(new_sample["scores"]) > 0
+
+                encs_data.append(new_sample)
+
+            encs_data_flat = [line["cost"] for line in encs_data]
+            cost_avg = np.average(encs_data_flat)
+            cost_std = np.std(encs_data_flat)
+            for line in encs_data:
+                # z-normalize and make mean 1
+                line["cost"] = (line["cost"] - cost_avg) / cost_std + 1
+
+            encs_data_flat = [line["cost"] for line in encs_data]
+            cost_min = np.min(encs_data_flat)
+            for line in encs_data:
+                # make sure it's positive
+                line["cost"] = (line["cost"] - cost_min) / (1 - cost_min)
+
+            lp2src_data_list["en-cs"] = encs_data
 
         logger.info(
             "Num segments before domain filtering: {}".format(

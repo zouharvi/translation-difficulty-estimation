@@ -1,8 +1,8 @@
 """
 We piggy-back on top of subset2evaluate for now. This might change later.
 """
-
-from typing import List, Optional, Dict
+import logging
+from typing import List, Optional, Dict, Set, Literal
 
 import scipy
 import subset2evaluate.evaluate
@@ -10,6 +10,9 @@ import collections
 import numpy as np
 
 from difficulty_sampling.data import Data, SrcData, get_src_score
+
+
+logger = logging.getLogger(__name__)
 
 # compute cluster count and rank correlation
 eval_clu_cor = subset2evaluate.evaluate.eval_clucor
@@ -23,6 +26,7 @@ def main_eval(
     src_data_list: List[SrcData],
     method_name: str,
     budget: int = 100,
+    protocol: Literal["esa", "mqm"] = "esa",
     sorted_src_data_ids: Optional[List[int]] = None,
 ):
     """
@@ -32,11 +36,15 @@ def main_eval(
         src_data_list: List of source texts data.
         method_name: Name of the method whose scores will be used for subsampling.
         budget: Number of source texts to maintain in the sampled subset.
+        protocol: Protocol used for evaluation. Default: "esa".
         sorted_src_data_ids: List of source text IDs for subsampling. If None, subsampling will be run. Default: None.
 
     Returns:
         MainResult: Evaluation results with `AvgScore`, `AvgScore-z`, `DiffCorr`, and `% Perfect`.
     """
+    if protocol != "esa" and protocol != "mqm":
+        raise ValueError(f"Protocol must be either 'esa' or 'mqm'! Found: {protocol}.")
+
     if sorted_src_data_ids is None:
         avg_method_scores = [
             np.average(
@@ -78,7 +86,7 @@ def main_eval(
     # result_clusters = subset2evaluate.evaluate.eval_subset_clusters(filtered_src_data_list, "human")
     result_avg_perfect = np.average(
         [
-            int(method_name2score["human"] == 100)
+            int(method_name2score["human"] == (100 if protocol == "esa" else 0))
             for src_data in filtered_src_data_list
             for method_name2score in src_data["scores"].values()
         ]
@@ -88,8 +96,16 @@ def main_eval(
     for sys in src_data_list[0]["scores"]:
         result_diff_corr.append(
             scipy.stats.kendalltau(
-                [src_data["scores"][sys][method_name] for src_data in src_data_list],
-                [src_data["scores"][sys]["human"] for src_data in src_data_list],
+                [
+                    src_data["scores"][sys][method_name]
+                    for src_data in src_data_list
+                    if sys in src_data["scores"]
+                ],
+                [
+                    src_data["scores"][sys]["human"]
+                    for src_data in src_data_list
+                    if sys in src_data["scores"]
+                ],
                 variant="b",
             ).statistic
         )
@@ -155,8 +171,10 @@ def main_eval_avg(
     data: Data,
     single_src_subset: bool = False,
     is_method_tgt_lang_dep: bool = False,
+    protocol: Literal["esa", "mqm"] = "esa",
     budget: Optional[int] = None,
     proportion: Optional[float] = None,
+    domains: Optional[Set[str]] = None,
 ) -> MainResult:
     """
     Run the subset difficulty evaluation on the input data using the input method for subsampling.
@@ -166,21 +184,44 @@ def main_eval_avg(
         data: Data to use for evaluation.
         single_src_subset: Whether to use a shared source text subset across language pairs. Default: False.
         is_method_tgt_lang_dep: Method is tgt lang dependent. Used only if `single_src_subset` is True. Default: False.
+        protocol: Protocol used for evaluation. Default: "esa".
         budget: Number of source texts to maintain in the sampled subset. Default: None.
         proportion: Proportion of source texts to maintain in the sampled subset. Default: None.
+        domains: Domains to filter the data. Default: None.
 
     Returns:
         MainResult: Evaluation results with macro `AvgScore`, `AvgScore-z`, `DiffCorr`, and `% Perfect`.
     """
+    if protocol != "esa" and protocol != "mqm":
+        raise ValueError(f"Protocol must be either 'esa' or 'mqm'! Found: {protocol}.")
+
     if budget is None and proportion is None:
         raise ValueError("Either budget or proportion must be specified!")
+
+    lp2src_data_list = data.lp2src_data_list
+    if domains is not None:
+        logger.info(
+            "Num segments before domain filtering: {}".format(
+                len(next(iter(lp2src_data_list.values())))
+            )
+        )
+        logger.info(f"Filtering data to the domains: {domains}.")
+        lp2src_data_list = {
+            lp: [sample for sample in src_data_list if sample["domain"] in domains]
+            for lp, src_data_list in lp2src_data_list.items()
+        }
+        logger.info(
+            "Num segments after domain filtering: {}.".format(
+                len(next(iter(lp2src_data_list.values())))
+            )
+        )
 
     results = []
     if single_src_subset and is_method_tgt_lang_dep:
         sorted_src_data_ids = get_round_robin_sorted_src_data_ids(
-            data.lp2src_data_list, method_name
+            lp2src_data_list, method_name
         )
-        for src_data_list in data.lp2src_data_list.values():
+        for src_data_list in lp2src_data_list.values():
             results.append(
                 main_eval(
                     src_data_list,
@@ -188,11 +229,12 @@ def main_eval_avg(
                     budget
                     if budget is not None
                     else int(len(src_data_list) * proportion),
+                    protocol,
                     sorted_src_data_ids,
                 )
             )
     else:
-        for src_data_list in data.lp2src_data_list.values():
+        for src_data_list in lp2src_data_list.values():
             results.append(
                 main_eval(
                     src_data_list,
@@ -200,6 +242,7 @@ def main_eval_avg(
                     budget
                     if budget is not None
                     else int(len(src_data_list) * proportion),
+                    protocol,
                 )
             )
 
