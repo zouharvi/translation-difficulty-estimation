@@ -442,6 +442,34 @@ def plot_item_classes(
         plot_path (Path): File path to save the plot.
         domains (Union[str, List[str]]): Domains to be analyzed. If not specified, all domains are considered ('all').
     """
+
+    # Set up LaTeX rendering
+    plt.rcParams.update(
+        {
+            "font.family": "serif",
+            "font.serif": ["Computer Modern Roman"],
+            "text.usetex": True,
+            "text.latex.preamble": r"\usepackage{amsmath,amssymb}",
+        }
+    )
+
+    cls2tex = {
+        "EASY": r"\textsc{Easy}",
+        "MIXED": r"\textsc{Mixed}",
+        "HARD": r"\textsc{Hard}",
+    }
+
+    import matplotlib.colors as mcolors
+
+    def lighten_color(color, amount=0.1):
+        c = np.array(mcolors.to_rgb(color))
+        white = np.array([1, 1, 1])
+        return tuple(c * amount + white * (1 - amount))
+
+    easy_color = lighten_color("green", 0.6)
+    hard_color = lighten_color("red", 0.6)
+    mixed_color = lighten_color("orange", 0.6)
+
     counts_per_lp = defaultdict(lambda: defaultdict(int))
 
     granularity = None
@@ -481,35 +509,105 @@ def plot_item_classes(
 
     # Define the classification classes to display.
     classes = ["EASY", "MIXED", "HARD"]
+    colors = [easy_color, mixed_color, hard_color]
+
     lp_list = sorted(counts_per_lp.keys())
     aggregated_data = []
-    x_labels = []
+    y_labels = []
     for lp in lp_list:
         row = [counts_per_lp[lp].get(cls, 0) for cls in classes]
         aggregated_data.append(row)
         total = sum(row)
-        # Include total count in tick label (important for MQM, where counts may vary).
-        x_labels.append(f"{lp} (N={total})")
+
+        src_lang = lp.split("-")[0]
+        tgt_lang = lp.split("-")[1]
+
+        tex_lp = rf"\textsc{{{src_lang}}} $\rightarrow$ \textsc{{{tgt_lang}}}"
+
+        y_labels.append(f"{tex_lp}")
+
+    logging.info(
+        f"NOTE: the x-axis labels do not contain 'total' anymore. If using MQM, add it back to see variability across languages"
+    )
 
     data_array = np.array(aggregated_data)
-    x = np.arange(len(lp_list))
-    fig, ax = plt.subplots(figsize=(10, 6))
-    bottom = np.zeros(len(lp_list))
-    for i, cls in enumerate(classes):
-        ax.bar(x, data_array[:, i], label=cls, bottom=bottom, width=0.6)
-        bottom += data_array[:, i]
+    y = np.arange(len(lp_list))
+    # Adjust figure size for horizontal bars (swapped width/height)
+    fig, ax = plt.subplots(figsize=(10, 8), dpi=150)
+    # Add a light grid for better readability
+    ax.grid(axis="x", linestyle="--", alpha=0.7, zorder=0)
 
-    ax.set_xticks(x)
-    ax.set_xticklabels(x_labels, rotation=45, ha="right")
-    ax.set_xlabel("Language Pair")
-    ylabel = f"Number of {granularity}s"
-    ax.set_ylabel(ylabel)
+    left = np.zeros(len(lp_list))
+    bars = []
+    for i, cls in enumerate(classes):
+        # Use barh instead of bar
+        bar = ax.barh(
+            y,
+            data_array[:, i],
+            label=cls2tex[cls],
+            left=left,
+            height=0.8,
+            color=colors[i],
+            edgecolor="black",
+            linewidth=0.5,
+            zorder=3,
+        )
+        bars.append(bar)
+        left += data_array[:, i]
+
+    ax.set_yticks(y)
+    # No rotation needed for y-axis labels in horizontal layout
+    ax.set_yticklabels(y_labels, fontsize=28, ha="left")
+
+    for label in ax.get_yticklabels():
+        label.set_x(-0.22)
+
+    ax.set_ylabel("Translation Direction", fontsize=28, labelpad=16)
+    ax.set_xlabel(f"Number of {granularity}s", fontsize=28, labelpad=16)
+    ax.tick_params(axis="both", which="major", labelsize=28)
+
     ax.set_title(
-        f"{granularity} Classification Counts per Language Pair (domains: {domains})"
+        f"Difficulty Across Translation Directions",
+        fontsize=32,
+        pad=22,
     )
-    ax.legend()
+
+    # Add a thin border around the plot
+    for spine in ax.spines.values():
+        spine.set_linewidth(0.5)
+
+    # Create custom legend with reordered items
+    # First get the original legend handles and labels
+    handles, labels = ax.get_legend_handles_labels()
+
+    # Create a new order mapping: Easy (0), Hard (2), Mixed (1)
+    new_order = [0, 2, 1]
+
+    # Reorder the handles and labels
+    handles = [handles[i] for i in new_order]
+    labels = [labels[i] for i in new_order]
+
+    # Create new legend with custom order and position
+    legend = ax.legend(
+        handles,
+        labels,
+        title="Difficulty Level",
+        loc="lower left",
+        fontsize=26,
+        title_fontsize=30,
+        frameon=True,
+        fancybox=True,
+        facecolor="white",
+        edgecolor="gray",
+        framealpha=0.9,
+        bbox_to_anchor=(0.05, 0.01),  # Moved slightly more to the right
+    )
+
     plt.tight_layout()
-    plt.savefig(plot_path, bbox_inches="tight")
+    plt.savefig(plot_path, bbox_inches="tight", dpi=300)
+    plt.savefig(
+        plot_path.with_suffix(".pdf"), bbox_inches="tight", dpi=300
+    )  # Save as PDF for high quality
     plt.close(fig)
 
 
@@ -539,7 +637,7 @@ def errors_analysis_command() -> None:
         for segment_annotation in data:
             if (
                 (domains != "all" and segment_annotation["domain"] not in domains)
-                or segment_annotation["langs"][:2] != "en"
+                # or segment_annotation["langs"][:2] != "en"
                 or segment_annotation["system"] in systems_to_filter
             ):
                 continue
