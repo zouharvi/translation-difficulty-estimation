@@ -50,26 +50,35 @@ class Data:
         protocol: str,
         domains: Union[str, List[str]] = "all",
         include_ref: bool = False,
+        include_human: bool = False,
     ):
         """
-        Load the data for the given dataset, language pair, protocol and domains
+        Load the data for the given dataset, language pair, protocol, and domains.
 
         Args:
-            dataset_name (str): Name of the dataset (e.g. wmt24, wmt23, ...)
-            lps (List[str]): Language pairs (e.g., en-es, en-de, ...). ['en-x'] -> all EN-X wmt24 data will be used.
-            protocol (str): Protocol used for evaluation (e.g., esa, mqm, ...)
-            domains (Union[str, List[str]], optional): List of domains to analyze (e.g., ['news']). Defaults to "all".
+            dataset_name: Name of the dataset (e.g., wmt24, wmt23, ...)
+            lps: Language pairs (e.g., `['en-es', 'en-hi']`). `['en-x']`->EN-X wmt24 data. `['all']`->all wmt24 data.
+            protocol: Protocol used for evaluation (e.g., esa, mqm, ...)
+            domains: List of domains to analyze (e.g., ['news']). Defaults to "all".
+            include_ref: Whether to include the reference translations in the data. Default: False.
+            include_human: Whether to include human systems in the data. Default: False.
         """
-        from difficulty_sampling import wmt24_from_en_lps_esa, wmt24_from_en_lps_mqm
-
-        assert (
-            protocol is not None
-        ), "You need to specify the protocol, such as 'esa', 'da' or 'mqm'."
+        from difficulty_sampling import (
+            wmt24_from_en_lps_esa,
+            wmt24_from_en_lps_mqm,
+            wmt24_lps_esa,
+            wmt24_lps_mqm,
+        )
 
         if lps == ["en-x"]:
             dataset_name, lps = (
                 "wmt24",
                 wmt24_from_en_lps_esa if protocol == "esa" else wmt24_from_en_lps_mqm,
+            )
+        elif lps == ["all"]:
+            dataset_name, lps = (
+                "wmt24",
+                wmt24_lps_esa if protocol == "esa" else wmt24_lps_mqm,
             )
 
         logger.info(
@@ -83,9 +92,10 @@ class Data:
                 normalize=False,
                 file_protocol=protocol,
                 include_ref=include_ref,
+                include_human=include_human,
             )
             for lp in lps
-            if lp != "en-cs"
+            if not (lp == "en-cs" and dataset_name == "wmt24")
         }
 
         if "en-cs" in lps:
@@ -134,7 +144,9 @@ class Data:
 
                 sys2annotations = dict()
                 for annotation_dict in annotated_translations:
-                    if annotation_dict["system"] == "refA":
+                    if annotation_dict["system"] == "refA" and (
+                        not include_ref or not include_human
+                    ):
                         continue
 
                     sys = (
@@ -165,7 +177,14 @@ class Data:
                         metric_name,
                         sys2metric_scores,
                     ) in metric_name2seg_scores.items():
-                        assert sys2metric_scores[sys][line_id] is not None
+                        if (
+                            len(sys2metric_scores[sys]) <= line_id
+                            or sys2metric_scores[sys][line_id] is None
+                        ):
+                            assert (
+                                sys == "refA"
+                            )  # Ref-based metrics did not score 'refA'.
+                            continue
                         new_sample["scores"][sys][metric_name] = sys2metric_scores[sys][
                             line_id
                         ]
