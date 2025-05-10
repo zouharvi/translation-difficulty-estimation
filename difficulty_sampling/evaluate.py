@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 eval_clu_cor = subset2evaluate.evaluate.eval_clucor
 
 MainResult = collections.namedtuple(
-    "MainResult", ["avg_score", "avg_score_z", "diff_corr", "avg_perfect"]
+    "MainResult", ["avg_score", "diff_corr", "avg_easy"]
 )
 
 
@@ -75,22 +75,11 @@ def main_eval(
         ]
     )
 
-    result_avg_score_z = np.average(
-        [
-            method_name2score["human_z"]
-            for src_data in filtered_src_data_list
-            for method_name2score in src_data["scores"].values()
-        ]
-    )
-
-    # result_clusters = subset2evaluate.evaluate.eval_subset_clusters(filtered_src_data_list, "human")
-    result_avg_perfect = np.average(
-        [
-            int(method_name2score["human"] == (100 if protocol == "esa" else 0))
-            for src_data in filtered_src_data_list
-            for method_name2score in src_data["scores"].values()
-        ]
-    )
+    # result_clusters = subset2evaluate.evaluate.eval_subset_clusters(data_new, "human")
+    result_avg_easy = np.average([
+        np.average([line["scores"][sys]["human"] >= 90 for sys in line["scores"].keys()]) >= 0.5
+        for line in data_new
+    ])
 
     result_diff_corr = []
     for sys in src_data_list[0]["scores"]:
@@ -113,9 +102,8 @@ def main_eval(
 
     return MainResult(
         avg_score=result_avg_score,
-        avg_score_z=result_avg_score_z,
         diff_corr=result_diff_corr,
-        avg_perfect=result_avg_perfect,
+        avg_easy=result_avg_easy,
     )
 
 
@@ -248,8 +236,7 @@ def main_eval_avg(
 
     # Average results per language pair.
     return MainResult(
-        avg_score=np.average([r.avg_score for r in results]),
-        avg_score_z=np.average([r.avg_score_z for r in results]),
-        diff_corr=np.average([r.diff_corr for r in results]),
-        avg_perfect=np.average([r.avg_perfect for r in results]),
+        avg_score=np.average([x.avg_score for x in results]),
+        diff_corr=np.average([x.diff_corr for x in results]),
+        avg_easy=np.average([x.avg_easy for x in results]),
     )

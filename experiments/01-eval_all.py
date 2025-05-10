@@ -239,7 +239,6 @@ with open(
         print(
             f"{method_name:>20}{'*' if is_method_tgt_lang_dep else ''}",
             f"{results.avg_score:.1f}",
-            f"{results.avg_score_z:.2f}",
             f"{results.diff_corr:.3f}",
             f"{results.avg_perfect:.1%}".replace("%", "\\%"),
             sep=" & ",
