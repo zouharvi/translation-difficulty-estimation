@@ -73,9 +73,6 @@ for data in tqdm.tqdm(list(data_all.lp2src_data_list.values())):
         }
 
 # %%
-import importlib
-importlib.reload(subsampling.sentinel)
-
 # apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
     subsampling.sentinel.get_sentinel_src_metric_model("Prosho/sentinel-src-mqm-wmt1923"),
@@ -83,8 +80,6 @@ subsampling.sentinel.sentinel_src_metric_model_score(
     data=data_all,
     use_tgt_lang_token=True,
 )
-
-# %%
 subsampling.misc.apply_subset2evaluate(data_all, method="random")
 subsampling.syntactic_complexity.syntactic_complexity_score(
     data_all, "syntactic_complexity"

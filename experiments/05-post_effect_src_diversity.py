@@ -12,6 +12,7 @@ import sentence_transformers
 import collections
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 data_all = difficulty_sampling.data.Data.load(
     dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa"
@@ -19,18 +20,37 @@ data_all = difficulty_sampling.data.Data.load(
 
 # %%
 
-subsampling.misc.apply_subset2evaluate(data_all, method="random")
-subsampling.misc.apply_src_len(data_all)
-subsampling.negative_word_frequency.negative_word_frequency_score(
-    data_all, "negative_word_frequency"
-)
+# apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-mqm-tgt-lang"
-    ),
-    scorer_name="sentinel-src-mqm-tgt-lang",
+    subsampling.sentinel.get_sentinel_src_metric_model("Prosho/sentinel-src-mqm-wmt1923"),
+    scorer_name="sentinel-src-mqm-wmt1923",
     data=data_all,
     use_tgt_lang_token=True,
+)
+subsampling.misc.apply_subset2evaluate(data_all, method="random")
+subsampling.syntactic_complexity.syntactic_complexity_score(
+    data_all, "syntactic_complexity"
+)
+subsampling.misc.apply_external_artificial_crowd_metrics(
+    data_all,
+    sys2translations_path=Path(
+        "../data/artificial_crowd/scored_translations/sys2translations.pickle"
+    ),
+    metric="MetricX-24-Hybrid-QE-XXL", 
+)
+subsampling.misc.apply_llm_as_a_judge(
+    data_all,
+    scored_source_texts_df_path=Path(
+        "../data/LLM-as-a-Judge/new/command-a/wmt_data_with_source_based_num_scores.csv"
+    ),
+    llm_name="Command-A_new",
+)
+subsampling.misc.apply_llm_as_a_judge(
+    data_all,
+    scored_source_texts_df_path=Path(
+        "../data/LLM-as-a-Judge/new/gpt-4o/gpt-4o-1120_source_based_num_scores.csv"
+    ),
+    llm_name="GPT-4o",
 )
 
 # %%
@@ -64,6 +84,17 @@ def measure_avg_sim(method_name, p: float):
         mean_dists.append(mean_dist)
     return np.average(mean_dists)
 
+
+
+METHOD_TO_NAME = {
+    "random": "Random",
+    "LLM-as-a-Judge (Command-A_new, src-based)": "LLM-as-a-Judge",
+    "syntactic_complexity": "Syntax Complexity",
+    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Artificial Crowd",
+    "sentinel-src-mqm-wmt1923": "Sentinel",
+    "human": "Oracle",
+}
+
 def measure_closest_sim(method_name, p: float):
     closest_dists = []
     for data in data_all.lp2src_data_list.values():
@@ -91,12 +122,7 @@ results_avg_random = collections.defaultdict(list)
 results_closest = collections.defaultdict(list)
 results_closest_random = collections.defaultdict(list)
 for p in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
-    for method in [
-        "sentinel-src-mqm-tgt-lang",
-        "negative_word_frequency",
-        "src_len",
-        "human",
-    ]:
+    for method in METHOD_TO_NAME.keys():
         results_avg[method].append(measure_avg_sim(method, p))
         results_closest[method].append(measure_closest_sim(method, p))
 
@@ -108,15 +134,86 @@ for i in range(10):
 
 
 
+
 # %%
 
-METHOD_TO_NAME = {
-    "human": "Oracle",
-    "src_len": "Source Length",
-    "syntactic_complexity": "Syntactic Complexity",
-    "negative_word_frequency": "Negative Word Frequency",
-    "sentinel-src-mqm-tgt-lang": "Sentinel-MQM-TGT",
+
+METHOD_TO_COLOR = {
+    "random": "black",
+    "human": difficulty_sampling.utils.COLORS[0],
+    "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
+    "LLM-as-a-Judge (Command-A_new, src-based)": difficulty_sampling.utils.COLORS[1],
+    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": difficulty_sampling.utils.COLORS[4],
+    "sentinel-src-mqm-wmt1923": difficulty_sampling.utils.COLORS[2],
 }
+
+import difficulty_sampling.utils
+
+difficulty_sampling.utils.matplotlib_default()
+
+plt.figure(figsize=(3.5, 2))
+
+
+for i, results_v in results_closest_random.items():
+    plt.plot(
+        [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+        results_v,
+        color="black",
+        alpha=0.2,
+        label="Random" if i == 0 else None,
+    )
+
+for method in METHOD_TO_COLOR.keys():
+    results_v = results_closest[method]
+    if method == "random":
+        continue
+    plt.plot(
+        [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+        results_v,
+        label=METHOD_TO_NAME[method],
+        color=METHOD_TO_COLOR[method],
+        linewidth=2,
+    )
+
+# turn off spines
+plt.gca().spines[["top", "right"]].set_visible(False)
+
+# xticks formatter percentage
+plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x*100)}%"))
+
+plt.ylabel("Closest Neighbour\nCosine Similarity")
+plt.xlabel("Proportion of original data")
+plt.ylim(0.434, None)
+
+handles = plt.gca().get_legend_handles_labels()
+
+plt.tight_layout(pad=0)
+plt.savefig("../generated/05-post_effect_src_diversity.pdf")
+plt.show()
+
+# %%
+# plot just the legend
+
+# fix the line for Random
+handles[0][0].set_alpha(1)
+
+plt.figure(figsize=(3.5, 0.4))
+plt.legend(
+    *handles,
+    loc="center",
+    fontsize=9,
+    ncol=3,
+    frameon=False,
+    handlelength=0.7,
+    handletextpad=0.5,
+    columnspacing=0.5,
+)
+plt.axis("off")
+plt.tight_layout(pad=0)
+plt.savefig("../generated/05-post_effect_src_diversity_legend.pdf")
+plt.show()
+
+# %%
 
 for i, results_v in results_avg_random.items():
     plt.plot(
@@ -134,30 +231,6 @@ for method, results_v in results_avg.items():
 plt.gca().spines[["top", "right"]].set_visible(False)
 
 plt.ylabel("Average Source Cosine Similarity")
-plt.xlabel("Subset size")
-plt.legend(frameon=False)
-plt.show()
-
-
-# %%
-
-
-for i, results_v in results_closest_random.items():
-    plt.plot(
-        [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-        results_v,
-        color="black",
-        alpha=0.5,
-        label="Random" if i == 0 else None,
-    )
-
-for method, results_v in results_closest.items():
-    plt.plot([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], results_v, label=METHOD_TO_NAME[method])
-
-# turn off spines
-plt.gca().spines[["top", "right"]].set_visible(False)
-
-plt.ylabel("Closest Neighbour Cosine Similarity")
-plt.xlabel("Subset size")
+plt.xlabel("Proportion of original data")
 plt.legend(frameon=False)
 plt.show()
