@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import difficulty_sampling.utils
 import scipy.stats
 import subsampling.sentinel
+from pathlib import Path
 from fastchrf import pairwise_chrf
 
 data_all = difficulty_sampling.data.Data.load(
@@ -72,38 +73,44 @@ for data in tqdm.tqdm(list(data_all.lp2src_data_list.values())):
         }
 
 # %%
+import importlib
+importlib.reload(subsampling.sentinel)
 
+# apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model("sapienzanlp/sentinel-src-mqm"),
-    scorer_name="sentinel-src-mqm",
-    data=data_all,
-    use_tgt_lang_token=False,
-)
-
-subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-mqm-tgt-lang"
-    ),
-    scorer_name="sentinel-src-mqm-tgt-lang",
+    subsampling.sentinel.get_sentinel_src_metric_model("Prosho/sentinel-src-mqm-wmt1923"),
+    scorer_name="sentinel-src-mqm-wmt1923",
     data=data_all,
     use_tgt_lang_token=True,
 )
+
+# %%
 subsampling.misc.apply_subset2evaluate(data_all, method="random")
-subsampling.misc.apply_src_len(data_all)
-subsampling.misc.apply_src_len(data_all)
 subsampling.syntactic_complexity.syntactic_complexity_score(
     data_all, "syntactic_complexity"
 )
-subsampling.negative_word_frequency.negative_word_frequency_score(
-    data_all, "negative_word_frequency"
+subsampling.misc.apply_external_artificial_crowd_metrics(
+    data_all,
+    sys2translations_path=Path(
+        "../data/artificial_crowd/scored_translations/sys2translations.pickle"
+    ),
+    metric="MetricX-24-Hybrid-QE-XXL", 
 )
-subsampling.negative_word_frequency.negative_word_frequency_score(
-    data_all, "negative_word_zipf_frequency"
+subsampling.misc.apply_llm_as_a_judge(
+    data_all,
+    scored_source_texts_df_path=Path(
+        "../data/LLM-as-a-Judge/new/command-a/wmt_data_with_source_based_num_scores.csv"
+    ),
+    llm_name="Command-A_new",
 )
-subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_avg")
-subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_diff")
-subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_var")
-subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_diversity")
+subsampling.misc.apply_llm_as_a_judge(
+    data_all,
+    scored_source_texts_df_path=Path(
+        "../data/LLM-as-a-Judge/new/gpt-4o/gpt-4o-1120_source_based_num_scores.csv"
+    ),
+    llm_name="GPT-4o",
+)
+
 
 # %%
 
@@ -122,21 +129,30 @@ def avg_difficulty_across_langs(key):
         for i in range(data_size)
     ]
 
+import collections
+METHOD_CORR = collections.defaultdict(dict)
 
 def plot_problem(ax, data_x, data_y, key_x, key_y):
     ax.scatter(
         data_x, data_y,
-        s=10,
-        color="#722",
-        alpha=0.5,
+        s=5,
+        color="black",
+        alpha=0.7,
         linewidth=0,
     )
-    ax.set_xlabel(key_x)
-    ax.set_ylabel(key_y)
     ax.spines[["top", "right"]].set_visible(False)
 
     corr_pearson = scipy.stats.pearsonr(data_x, data_y)[0]
     corr_spearman = scipy.stats.spearmanr(data_x, data_y)[0]
+
+    if key_x == "random":
+        corr_pearson = 0.0
+        corr_spearman = 0.0
+
+    METHOD_CORR[key_y][key_x] = {
+        "pearson": corr_pearson,
+        "spearman": corr_spearman,
+    }
     ax.text(
         0.95, 0.05,
         f"ρ={corr_pearson:.2f} (Pearson)\nρ={corr_spearman:.2f} (Spearman)",
@@ -146,13 +162,26 @@ def plot_problem(ax, data_x, data_y, key_x, key_y):
         va="bottom",
     )
 
-def plot_method(method_name):
-    fig, axs = plt.subplots(1, 5, figsize=(14, 3.5))
 
+METHOD_TO_NAME = {
+    "random": "Random",
+    "LLM-as-a-Judge (Command-A_new, src-based)": "LLM-as-a-Judge",
+    "syntactic_complexity": "Syntactic Complexity",
+    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Artificial Crowd",
+    "sentinel-src-mqm-wmt1923": "Sentinel",
+    "human": "Oracle",
+}
+
+fig, axss = plt.subplots(
+    len(METHOD_TO_NAME), 5,
+    figsize=(11, 2.5*len(METHOD_TO_NAME)),
+    width_ratios=[1, 1, 1, 1, 1],
+)
+for axs_i, (axs, (method, method_name)) in enumerate(zip(axss, METHOD_TO_NAME.items())):
     plot_problem(
         axs[0],
         avg_effect_across_langs("length"),
-        avg_difficulty_across_langs(method_name),
+        avg_difficulty_across_langs(method),
         key_x="length (characters)",
         key_y=method_name,
     )
@@ -160,7 +189,7 @@ def plot_method(method_name):
     plot_problem(
         axs[1],
         avg_effect_across_langs("output_unique"),
-        avg_difficulty_across_langs(method_name),
+        avg_difficulty_across_langs(method),
         key_x="% output unique",
         key_y=method_name,
     )
@@ -168,7 +197,7 @@ def plot_method(method_name):
     plot_problem(
         axs[2],
         avg_effect_across_langs("output_diversity_ip"),
-        avg_difficulty_across_langs(method_name),
+        avg_difficulty_across_langs(method),
         key_x="output diversity (embd)",
         key_y=method_name,
     )
@@ -176,30 +205,84 @@ def plot_method(method_name):
     plot_problem(
         axs[3],
         avg_effect_across_langs("output_diversity_chrf"),
-        avg_difficulty_across_langs(method_name),
-        key_x="output diversity (chrf)",
+        avg_difficulty_across_langs(method),
+        key_x="output diversity (chrF)",
         key_y=method_name,
     )
 
     plot_problem(
         axs[4],
         avg_effect_across_langs("grammaticality"),
-        avg_difficulty_across_langs(method_name),
+        avg_difficulty_across_langs(method),
         key_x="grammar errors per word",
         key_y=method_name,
     )
 
-    plt.tight_layout()
-    plt.show()
+    axs[0].set_ylabel(method_name)
 
-plot_method("sentinel-src-mqm")
-plot_method("sentinel-src-mqm-tgt-lang")
-plot_method("syntactic_complexity")
-plot_method("negative_word_frequency")
-plot_method("negative_word_zipf_frequency")
-plot_method("precomet_avg")
-plot_method("precomet_var")
-plot_method("precomet_diff")
-plot_method("precomet_diversity")
-plot_method("src_len")
-plot_method("random")
+    if axs_i == len(METHOD_TO_NAME)-1:
+        axs[0].set_xlabel("Length")
+        axs[1].set_xlabel("Output Uniqueness")
+        axs[2].set_xlabel("Output Diversity (Embedding)")
+        axs[3].set_xlabel("Output Diversity (chrF)")
+        axs[4].set_xlabel("Grammaticality")
+
+
+plt.tight_layout(pad=0)
+plt.savefig("../generated/03-post_effect.pdf")
+plt.show()
+
+
+# %%
+
+fout = open("../generated/03-post_effect_corr.tex", "w")
+
+# import sys
+# fout = sys.stdout
+
+print("\\begin{tabular}{l" + "r" * len(METHOD_CORR["Oracle"]) + "} \n \\toprule", file=fout)
+METHODNAME_TO_SHORT = {
+    "Random": "Random",
+    "LLM-as-a-Judge": "LLM-as-a-Judge",
+    "Syntactic Complexity": "Syntax Complexity",
+    "Artificial Crowd": "Artificial Crowd",
+    "Sentinel": "Sentinel",
+    "Oracle": "Oracle",
+}
+print(r"""
+    & \multicolumn{2}{c}{Source} & \multicolumn{2}{c}{Diversity} & Unique \\
+    & length & errors & embd & chrF & outputs \\
+    \midrule
+    """,
+    file=fout
+)
+
+def format_cell(v, minv=0, maxv=1.1):
+    va = abs(v)
+    color = int(100  * (va-minv) / (maxv-minv))
+    return f"\\cellcolor{{red!{color}}} {v:.2f}"
+
+METHOD_CORR["Random"] = {
+    k: {"pearson": 0.0, "spearman": 0.0}
+    for k in METHOD_CORR["Random"].keys()
+}
+
+KEYX = [
+    "length (characters)",
+    "grammar errors per word",
+    "output diversity (embd)",
+    "output diversity (chrF)",
+    "% output unique",
+]
+for method_name, method_v in METHOD_CORR.items():
+    print(f"{METHODNAME_TO_SHORT[method_name]} & ", file=fout)
+    print(
+        *[format_cell(method_v[k]["pearson"]) for k in KEYX],
+        sep=" & ",
+        end="\\\\\n",
+        file=fout,
+    )
+
+print("\\bottomrule ", file=fout)
+print("\\end{tabular}", file=fout)
+fout.close()

@@ -31,7 +31,7 @@ subsampling.misc.apply_external_artificial_crowd_metrics(
     sys2translations_path=Path(
         "../data/artificial_crowd/scored_translations/sys2translations.pickle"
     ),
-    metric="MetricX-24-Hybrid-XXL", 
+    metric="MetricX-24-Hybrid-QE-XXL", 
 )
 subsampling.misc.apply_llm_as_a_judge(
     data,
@@ -61,7 +61,7 @@ METHOD_TO_NAME = {
     "random": "Random",
     "LLM-as-a-Judge (Command-A_new, src-based)": "LLM-as-a-Judge",
     "syntactic_complexity": "Syntactic Complexity",
-    "ext_artcrowd|MetricX-24-Hybrid-XXL": "Artificial Crowd",
+    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Artificial Crowd",
     "sentinel-src-mqm-wmt1923": "Sentinel",
     "human": "Oracle",
 }
@@ -70,7 +70,7 @@ METHOD_TO_COLOR = {
     "human": difficulty_sampling.utils.COLORS[0],
     "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
     "sentinel-src-mqm-wmt1923": difficulty_sampling.utils.COLORS[2],
-    "ext_artcrowd|MetricX-24-Hybrid-XXL": difficulty_sampling.utils.COLORS[4],
+    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": difficulty_sampling.utils.COLORS[4],
     "LLM-as-a-Judge (Command-A_new, src-based)": difficulty_sampling.utils.COLORS[1],
 }
 
@@ -122,7 +122,7 @@ handles = axs[0].get_legend_handles_labels()
 for method, coords0, coords1 in [
     ("human", (0.2, 0.23), (0.2, 0.12)),
     ("sentinel-src-mqm-wmt1923", (0.04, 0.52), (0.04, 0.29)),
-    ("ext_artcrowd|MetricX-24-Hybrid-XXL", (0.04, 0.76), (0.04, 0.66)),
+    ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", (0.04, 0.76), (0.04, 0.66)),
 ]:
     axs[0].text(
         coords0[0], coords0[1],
