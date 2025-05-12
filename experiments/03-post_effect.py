@@ -53,7 +53,7 @@ for data in tqdm.tqdm(list(data_all.lp2src_data_list.values())):
         output_unique = len({tgt for tgt in line["tgt"].values()})/len(line["tgt"])
         output_diversity_ip = np.average([
             # cosine similarity
-            sentence_transformers.util.pytorch_cos_sim(
+            -sentence_transformers.util.pytorch_cos_sim(
                 tgt2embd[tgt1], tgt2embd[tgt2]
             ).item()
             for (sys1, tgt1), (sys2, tgt2) in itertools.product(line["tgt"].items(), line["tgt"].items())
