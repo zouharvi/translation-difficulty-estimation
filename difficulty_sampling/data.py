@@ -71,6 +71,10 @@ class Data:
         )
 
         if lps == ["en-x"]:
+            if dataset_name != "wmt24":
+                raise ValueError(
+                    f"Dataset {dataset_name} does not support language pair 'en-x'."
+                )
             dataset_name, lps = (
                 "wmt24",
                 wmt24_from_en_lps_esa if protocol == "esa" else wmt24_from_en_lps_mqm,

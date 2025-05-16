@@ -1,6 +1,7 @@
 import logging
 from argparse import Namespace
 from pathlib import Path
+from typing import Dict, List
 
 import sentinel_metric
 
@@ -70,7 +71,7 @@ def sentinel_src_metric_model_score(
             "`use_tgt_lang_token` input argument has been set to False!"
         )
 
-    lang2scores = dict()
+    lang2scores : Dict[str, List[float]] = dict()
     if use_tgt_lang_token or score_all_source_texts:
         for lp, src_data_list in data.lp2src_data_list.items():
             lang2scores[lp] = sentinel_src_metric_model.predict(
@@ -98,10 +99,8 @@ def sentinel_src_metric_model_score(
         for idx, sample in enumerate(src_data_list):
             for scorer_name2score in sample["scores"].values():
                 scorer_name2score[scorer_name] = lang2scores[
-                    lp
-                    if use_tgt_lang_token or score_all_source_texts
-                    else lp.split("-")[0]
-                ]
+                    lp if use_tgt_lang_token or score_all_source_texts else lp.split("-")[0]
+                ][idx]
 
     return data
 

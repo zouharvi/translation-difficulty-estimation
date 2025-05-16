@@ -10,9 +10,10 @@ from collections import Counter, defaultdict
 from typing import Dict, List, Union, TypedDict, Optional, Literal
 
 from difficulty_sampling import wmt24_from_en_lps_mqm
+from difficulty_sampling.utils import tgt2lp
+lp2tgt = {v: k for k, v in tgt2lp.items()}
 
 from mt_metrics_eval import data
-
 
 logging.basicConfig(level=logging.INFO)
 
@@ -74,9 +75,15 @@ def read_arguments() -> ArgumentParser:
     )
 
     parser.add_argument(
+        "--perc",
+        action="store_true",
+        help="Whether to plot the percentage of each class (for paper) instead of the absolute count.",
+    )
+
+    parser.add_argument(
         "--out-plot-path",
         type=Path,
-        required=True,
+        default="generated/analysis_esa_spans.pdf",
         help="Local file system path where to save the output plot.",
     )
 
@@ -610,6 +617,116 @@ def plot_item_classes(
     )  # Save as PDF for high quality
     plt.close(fig)
 
+def plot_item_classes_perc(
+    analysis_res: Dict, plot_path: Path, domains: Union[str, List[str]] = "all"
+) -> None:
+    """
+    Aggregates item (document or segment) classification counts per language pair and saves a stacked bar chart.
+
+    Args:
+        analysis_res (Dict): Classification results.
+        plot_path (Path): File path to save the plot.
+        domains (Union[str, List[str]]): Domains to be analyzed. If not specified, all domains are considered ('all').
+    """
+    counts_per_lp = defaultdict(lambda: defaultdict(int))
+
+    granularity = None
+    # We iterate over analysis_res with two possibilities:
+    # 1) Top-level keys are language pairs (e.g., MQM segment-level)
+    # 2) Top-level keys are document IDs (which may contain either a direct "classification"
+    #    or a dict keyed by segment IDs).
+    for top_key, lp_dict in analysis_res.items():
+        # Determine if top_key is a language pair (str) or a document ID.
+        # If top_key is in a predefined set of language pairs (wmt24_from_en_lps_mqm), then it's MQM segment-level.
+        if top_key in wmt24_from_en_lps_mqm:
+            # MQM segment-level analysis: top-level keys are language pairs.
+            lp = top_key
+            for seg_id, seg_info in lp_dict.items():
+                cls_val = seg_info["classification"]
+                counts_per_lp[lp][cls_val] += 1
+
+            granularity = "Segment"
+        else:
+            # Top-level key is not a language pair, assume it's a document ID.
+            # For each language pair in the document...
+            for lp, info in lp_dict.items():
+                # Check the type of keys in 'info'.
+                # If all keys are integers, we assume segment-level analysis.
+                if all(isinstance(k, int) for k in info.keys()):
+                    for seg_id, seg_info in info.items():
+                        cls_val = seg_info["classification"]
+                        counts_per_lp[lp][cls_val] += 1
+
+                    granularity = "Segment"
+                else:
+                    # Otherwise, assume document-level analysis.
+                    cls_val = info["classification"]
+                    counts_per_lp[lp][cls_val] += 1
+
+                    granularity = "Document"
+
+    # use tex font
+    plt.rcParams.update({"font.family": "serif"})
+
+    # Define the classification classes to display.
+    classes = {
+        "EASY": "#a1d48d",
+        "MIXED": "#ffd27d",
+        "HARD": "#ea848d",
+    }
+    lp_list = sorted(counts_per_lp.keys())
+    aggregated_data = []
+    y_labels = []
+    for lp in lp_list:
+        row = [counts_per_lp[lp].get(cls, 0) for cls in classes.keys()]
+        total = sum(row)
+        aggregated_data.append([x/total for x in row])
+        # lp = r"En.$\rightarrow$" + lp2tgt[lp].capitalize()
+        lp = lp2tgt[lp].capitalize()
+        print(f"{lp} (N={total})")
+        y_labels.append(lp)
+
+    data_array = np.array(aggregated_data)
+    # sort by easy
+    y_labels = sorted(y_labels, key=lambda x: data_array[y_labels.index(x)][0], reverse=False)
+    data_array = data_array[np.argsort(data_array[:, 0])]
+
+    x = np.arange(len(lp_list))
+    fig, ax = plt.subplots(figsize=(3.5, 2))
+    left = np.zeros(len(lp_list))
+    for i, (cls, cls_color) in enumerate(classes.items()):
+        ax.barh(x, data_array[:, i], label=cls, left=left, height=0.7, color=cls_color)
+        for j in range(len(lp_list)):
+            if data_array[j, i] < 0.03:
+                continue
+            ax.text(
+                left[j] + 0.07 if data_array[j, i] > 0.1 else left[j] + 0.05,
+                x[j],
+                f"{data_array[j, i]:.0%}",
+                ha="center",
+                va="center",
+                fontsize=8,
+                color="black",
+            )
+        left += data_array[:, i]
+
+    ax.set_yticks(x)
+    ax.set_yticklabels(y_labels, ha="right")
+    # set pad
+    # ax.tick_params(axis="y", pad=70)
+    # ax.set_xlabel("Proportion of segments based\non difficulty from English to X")
+    # xtick percentage
+
+    # turn off right and top spine
+    ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+    ax.set_xticks([])
+    # ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.0%}"))
+
+    plt.tight_layout()
+    plt.savefig(plot_path, bbox_inches="tight")
+    plt.show()
+    plt.close(fig)
+
 
 def errors_analysis_command() -> None:
     """
@@ -694,7 +811,10 @@ def errors_analysis_command() -> None:
             args.easy_systems_threshold, args.hard_systems_threshold
         )
 
-    plot_item_classes(analysis_res, args.out_plot_path, domains)
+    if args.perc:
+        plot_item_classes_perc(analysis_res, args.out_plot_path, domains)
+    else:
+        plot_item_classes(analysis_res, args.out_plot_path, domains)
 
 
 if __name__ == "__main__":

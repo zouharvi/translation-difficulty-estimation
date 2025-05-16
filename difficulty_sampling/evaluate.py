@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 eval_clu_cor = subset2evaluate.evaluate.eval_clucor
 
 MainResult = collections.namedtuple(
-    "MainResult", ["avg_score", "avg_score_z", "diff_corr", "avg_perfect"]
+    "MainResult", ["avg_score", "avg_easy", "diff_tau", "diff_pearson"]
 )
 
 
@@ -75,26 +75,15 @@ def main_eval(
         ]
     )
 
-    result_avg_score_z = np.average(
-        [
-            method_name2score["human_z"]
-            for src_data in filtered_src_data_list
-            for method_name2score in src_data["scores"].values()
-        ]
-    )
+    # result_clusters = subset2evaluate.evaluate.eval_subset_clusters(data_new, "human")
+    result_avg_easy = np.average([
+        np.average([line["scores"][sys]["human"] >= 90 for sys in line["scores"].keys()]) >= 0.5
+        for line in src_data_list
+    ])
 
-    # result_clusters = subset2evaluate.evaluate.eval_subset_clusters(filtered_src_data_list, "human")
-    result_avg_perfect = np.average(
-        [
-            int(method_name2score["human"] == (100 if protocol == "esa" else 0))
-            for src_data in filtered_src_data_list
-            for method_name2score in src_data["scores"].values()
-        ]
-    )
-
-    result_diff_corr = []
+    result_diff_tau = []
     for sys in src_data_list[0]["scores"]:
-        result_diff_corr.append(
+        result_diff_tau.append(
             scipy.stats.kendalltau(
                 [
                     src_data["scores"][sys][method_name]
@@ -109,13 +98,31 @@ def main_eval(
                 variant="b",
             ).statistic
         )
-    result_diff_corr = np.average(result_diff_corr)
+    result_diff_tau = np.average(result_diff_tau)
+
+    result_diff_pearson = []
+    for sys in src_data_list[0]["scores"]:
+        result_diff_pearson.append(
+            scipy.stats.pearsonr(
+                [
+                    src_data["scores"][sys][method_name]
+                    for src_data in src_data_list
+                    if sys in src_data["scores"]
+                ],
+                [
+                    src_data["scores"][sys]["human"]
+                    for src_data in src_data_list
+                    if sys in src_data["scores"]
+                ],
+            )[0]
+        )
+    result_diff_pearson = np.average(result_diff_pearson)
 
     return MainResult(
         avg_score=result_avg_score,
-        avg_score_z=result_avg_score_z,
-        diff_corr=result_diff_corr,
-        avg_perfect=result_avg_perfect,
+        avg_easy=result_avg_easy,
+        diff_tau=result_diff_tau,
+        diff_pearson=result_diff_pearson,
     )
 
 
@@ -248,8 +255,8 @@ def main_eval_avg(
 
     # Average results per language pair.
     return MainResult(
-        avg_score=np.average([r.avg_score for r in results]),
-        avg_score_z=np.average([r.avg_score_z for r in results]),
-        diff_corr=np.average([r.diff_corr for r in results]),
-        avg_perfect=np.average([r.avg_perfect for r in results]),
+        avg_score=np.average([x.avg_score for x in results]),
+        avg_easy=np.average([x.avg_easy for x in results]),
+        diff_tau=np.average([x.diff_tau for x in results]),
+        diff_pearson=np.average([x.diff_pearson for x in results]),
     )
