@@ -14,9 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 
-data_all = difficulty_sampling.data.Data.load(
-    dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa"
-)
+data_all = difficulty_sampling.data.Data.load(dataset_name="wmt24", lps=["all"], domains="all", protocol="esa")
 
 # %%
 
@@ -34,23 +32,20 @@ subsampling.syntactic_complexity.syntactic_complexity_score(
 subsampling.misc.apply_external_artificial_crowd_metrics(
     data_all,
     sys2translations_path=Path(
-        "../data/artificial_crowd/scored_translations/sys2translations.pickle"
+        "../data/external_artificial_crowd/sys2translations.pickle"
     ),
     metric="MetricX-24-Hybrid-QE-XXL", 
 )
 subsampling.misc.apply_llm_as_a_judge(
     data_all,
     scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/new/command-a/wmt_data_with_source_based_num_scores.csv"
+        "../data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_source_based_num_scores.csv"
     ),
-    llm_name="Command-A_new",
+    llm_name="Command-A",
 )
-subsampling.misc.apply_llm_as_a_judge(
+subsampling.misc.apply_oracle_with_fixed_scores(
     data_all,
-    scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/new/gpt-4o/gpt-4o-1120_source_based_num_scores.csv"
-    ),
-    llm_name="GPT-4o",
+    scorer_name="oracle-src",
 )
 
 # %%
@@ -65,6 +60,7 @@ src2embd = dict(zip(src2embd, sentence_transformers.SentenceTransformer("paraphr
 
 # %%
 
+data_x = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 def measure_avg_sim(method_name, p: float):
     mean_dists = []
     for data in data_all.lp2src_data_list.values():
@@ -88,11 +84,11 @@ def measure_avg_sim(method_name, p: float):
 
 METHOD_TO_NAME = {
     "random": "Random",
-    "LLM-as-a-Judge (Command-A_new, src-based)": "LLM-as-a-Judge",
+    "LLM-as-a-Judge (Command-A)": "LLM-as-a-Judge",
     "syntactic_complexity": "Syntax Complexity",
     "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Artificial Crowd",
     "sentinel-src-mqm-wmt1923": "Sentinel",
-    "human": "Oracle",
+    "oracle-src": "Oracle",
 }
 
 def measure_closest_sim(method_name, p: float):
@@ -121,69 +117,103 @@ results_avg = collections.defaultdict(list)
 results_avg_random = collections.defaultdict(list)
 results_closest = collections.defaultdict(list)
 results_closest_random = collections.defaultdict(list)
-for p in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+for p in data_x:
     for method in METHOD_TO_NAME.keys():
         results_avg[method].append(measure_avg_sim(method, p))
         results_closest[method].append(measure_closest_sim(method, p))
 
 for i in range(10):
     subsampling.misc.apply_subset2evaluate(data_all, method="random")
-    for p in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+    for p in data_x:
         results_avg_random[i].append(measure_avg_sim("random", p))
         results_closest_random[i].append(measure_closest_sim("random", p))
 
 
-
-
 # %%
-
 
 METHOD_TO_COLOR = {
     "random": "black",
-    "human": difficulty_sampling.utils.COLORS[0],
+    "oracle-src": difficulty_sampling.utils.COLORS[0],
     "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
-    "LLM-as-a-Judge (Command-A_new, src-based)": difficulty_sampling.utils.COLORS[1],
+    "LLM-as-a-Judge (Command-A)": difficulty_sampling.utils.COLORS[1],
     "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": difficulty_sampling.utils.COLORS[4],
     "sentinel-src-mqm-wmt1923": difficulty_sampling.utils.COLORS[2],
 }
 
-import difficulty_sampling.utils
-
 difficulty_sampling.utils.matplotlib_default()
 
-plt.figure(figsize=(3.5, 2))
+fig, axs = plt.subplots(2, 1, figsize=(3.5, 3.8))
 
-
-for i, results_v in results_closest_random.items():
-    plt.plot(
-        [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-        results_v,
-        color="black",
-        alpha=0.2,
-        label="Random" if i == 0 else None,
-    )
-
+# plot closest
+data_y_rand_closets_interval = [
+    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    for l in np.array(list(results_closest_random.values())).T
+]
+axs[0].fill_between(
+    data_x,
+    [x[0] for x in data_y_rand_closets_interval],
+    [x[1] for x in data_y_rand_closets_interval],
+    color=METHOD_TO_COLOR["random"],
+    linewidth=0,
+    alpha=0.4,
+    zorder=-10,
+    label="Random",
+)
 for method in METHOD_TO_COLOR.keys():
     results_v = results_closest[method]
     if method == "random":
         continue
-    plt.plot(
-        [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+    axs[0].plot(
+        data_x,
         results_v,
         label=METHOD_TO_NAME[method],
         color=METHOD_TO_COLOR[method],
         linewidth=2,
     )
 
-# turn off spines
-plt.gca().spines[["top", "right"]].set_visible(False)
+# plot avg
+data_y_rand_avg_interval = [
+    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    for l in np.array(list(results_avg_random.values())).T
+]
+axs[1].fill_between(
+    data_x,
+    [x[0] for x in data_y_rand_avg_interval],
+    [x[1] for x in data_y_rand_avg_interval],
+    color=METHOD_TO_COLOR["random"],
+    linewidth=0,
+    alpha=0.4,
+    zorder=-10,
+)
+for method in METHOD_TO_COLOR.keys():
+    results_v = results_avg[method]
+    if method == "random":
+        continue
+    axs[1].plot(
+        data_x,
+        results_v,
+        label=METHOD_TO_NAME[method],
+        color=METHOD_TO_COLOR[method],
+        linewidth=2,
+    )
 
-# xticks formatter percentage
-plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x*100)}%"))
+# configure decorations
+axs[0].spines[["top", "right"]].set_visible(False)
+axs[1].spines[["top", "right"]].set_visible(False)
 
-plt.ylabel("Closest Neighbour\nCosine Similarity")
-plt.xlabel("Proportion of original data")
-plt.ylim(0.434, None)
+axs[0].set_xticks(data_x[::2])
+axs[0].set_xticklabels([f"{int(p*100)}%" for p in data_x[::2]])
+axs[1].set_xticks(data_x[::2])
+axs[1].set_xticklabels([f"{int(p*100)}%" for p in data_x[::2]])
+
+# set formatter to three decimal places
+axs[0].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.3f}'))
+axs[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.3f}'))
+
+axs[0].set_ylabel("Closest Neighbour\nCosine Similarity")
+axs[1].set_ylabel("Average Pairwise\nCosine Similarity")
+axs[1].set_xlabel("Proportion of original data")
+axs[0].set_ylim(0.434, None)
 
 handles = plt.gca().get_legend_handles_labels()
 
@@ -192,14 +222,60 @@ plt.savefig("../generated/05-post_effect_src_diversity.pdf")
 plt.show()
 
 # %%
+
+
+plt.figure(figsize=(3.5, 2))
+
+data_y_rand_avg_interval = [
+    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    for l in np.array(list(results_avg_random.values())).T
+]
+
+plt.fill_between(
+    data_x,
+    [x[0] for x in data_y_rand_avg_interval],
+    [x[1] for x in data_y_rand_avg_interval],
+    color=METHOD_TO_COLOR["random"],
+    linewidth=0,
+    alpha=0.4,
+    zorder=-10,
+    # label="Random",
+)
+
+
+for method in METHOD_TO_COLOR.keys():
+    results_v = results_avg[method]
+    if method == "random":
+        continue
+    plt.plot(
+        data_x,
+        results_v,
+        label=METHOD_TO_NAME[method],
+        color=METHOD_TO_COLOR[method],
+        linewidth=2,
+    )
+
+
+
+handles, handles_txt = plt.gca().get_legend_handles_labels()
+
+plt.tight_layout(pad=0)
+plt.savefig("../generated/05-post_effect_src_diversity_avg.pdf")
+plt.show()
+
+# %%
 # plot just the legend
+import copy
 
 # fix the line for Random
-handles[0][0].set_alpha(1)
+handle_random = copy.deepcopy(handles[0])
+handle_random.set_color(METHOD_TO_COLOR["random"])
+
 
 plt.figure(figsize=(3.5, 0.4))
 plt.legend(
-    *handles,
+    [handle_random] + handles,
+    ["Random"] + handles_txt,
     loc="center",
     fontsize=9,
     ncol=3,
@@ -211,26 +287,4 @@ plt.legend(
 plt.axis("off")
 plt.tight_layout(pad=0)
 plt.savefig("../generated/05-post_effect_src_diversity_legend.pdf")
-plt.show()
-
-# %%
-
-for i, results_v in results_avg_random.items():
-    plt.plot(
-        [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-        results_v,
-        color="black",
-        alpha=0.5,
-        label="Random" if i == 0 else None,
-    )
-
-for method, results_v in results_avg.items():
-    plt.plot([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], results_v, label=METHOD_TO_NAME[method])
-
-# turn off spines
-plt.gca().spines[["top", "right"]].set_visible(False)
-
-plt.ylabel("Average Source Cosine Similarity")
-plt.xlabel("Proportion of original data")
-plt.legend(frameon=False)
 plt.show()

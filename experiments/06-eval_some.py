@@ -10,14 +10,11 @@ import subsampling.syntactic_complexity
 import subsampling.negative_word_frequency
 import subsampling.misc
 
-
-data_all = difficulty_sampling.data.Data.load(
-    dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa"
-)
+data_all = difficulty_sampling.data.Data.load(dataset_name="wmt24", lps=["all"], domains="all", protocol="esa")
 
 # %%
 subsampling.misc.apply_subset2evaluate(data_all, method="random")
-subsampling.misc.apply_src_len(data_all)
+subsampling.syntactic_complexity.src_len_score(data_all)
 subsampling.syntactic_complexity.syntactic_complexity_score(data_all, "syntactic_complexity")
 subsampling.negative_word_frequency.negative_word_frequency_score(data_all, "negative_word_frequency")
 subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_avg")
