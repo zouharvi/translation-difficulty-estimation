@@ -284,7 +284,7 @@ class DiffCorrTaskSet:
 
 
 def diff_correlations_on_wmt24(
-    lps: List[str], k=0
+    lps: List[str], k=0, corr_fcn: Literal["kendall", "pearson"] = "kendall"
 ) -> Tuple[DiffCorrTaskSet, List[float]]:
     """
     Generate the DiffCorr tasks on the WMT24 test set, together with the associated weight vector.
@@ -292,25 +292,27 @@ def diff_correlations_on_wmt24(
     Args:
         lps: List of language pairs to be used for the tasks.
         k: Number of resampling runs to be used for statistical significance. Default: 0.
+        corr_fcn: Correlation function to use for the tasks. Allowed values: 'kendall', 'pearson'. Default: 'kendall'.
 
     Returns:
         A tuple containing the DiffCorrTaskSet and a list of weights for each task.
     """
+    if corr_fcn != "kendall" and corr_fcn != "pearson":
+        raise ValueError(
+            f"Invalid value for corr_fcn: {corr_fcn}. Allowed values are 'kendall' and 'pearson'."
+        )
 
-    def add(language_pair: str, corr_fcn: Literal["kendall", "pearson"]) -> None:
+    def add(
+        language_pair: str, correlation_function: Literal["kendall", "pearson"]
+    ) -> None:
         """
         Add a DiffCorr task to the set.
 
         Args:
             language_pair: Language pair to be used for the task.
-            corr_fcn: Correlation function to be used for the task. Allowed values are 'kendall' and 'pearson'.
+            correlation_function: Correlation function to be used for the task.
         """
-        if corr_fcn != "kendall" and corr_fcn != "pearson":
-            raise ValueError(
-                f"Invalid value for corr_fcn: {corr_fcn}. Allowed values are 'kendall' and 'pearson'."
-            )
-
-        tasks.Append(DiffCorrTask(language_pair, corr_fcn=corr_fcn, k=k))
+        tasks.Append(DiffCorrTask(language_pair, corr_fcn=correlation_function, k=k))
 
     lps = sorted(lps)
 
@@ -318,7 +320,7 @@ def diff_correlations_on_wmt24(
 
     # For each language pair, compute DiffCorr.
     for lp in lps:
-        add(lp, "kendall")
+        add(lp, corr_fcn)
 
     weights = [1] * len(tasks)
     weights = [w / sum(weights) for w in weights]

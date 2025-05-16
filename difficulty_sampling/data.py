@@ -102,7 +102,7 @@ class Data:
             if not (lp == "en-cs" and dataset_name == "wmt24")
         }
 
-        if "en-cs" in lps:
+        if "en-cs" in lps and dataset_name == "wmt24":
             line_id2annotated_translations = collections.defaultdict(list)
             with WMT24_GENMT_DATA.open(encoding="utf-8") as f:
                 for line in f:

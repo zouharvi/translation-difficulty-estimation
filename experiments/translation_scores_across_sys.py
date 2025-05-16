@@ -59,6 +59,7 @@ def read_arguments() -> ArgumentParser:
         "full correlation matrix. Note: when this flag is used, --correlation is ignored and Kendall τ_b is always "
         "applied.",
     )
+
     parser.add_argument(
         "--out-plot-path",
         type=Path,

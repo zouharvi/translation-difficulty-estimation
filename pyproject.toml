@@ -28,6 +28,9 @@ dependencies = [
   "seaborn",
   "transformers @ git+https://github.com/huggingface/transformers@v4.49.0-Gemma-3",
   "accelerate",
+  "sudachipy",
+  "sudachidict-core", # These last two dependencies are needed for the Japanese tokenizer.
+  "spacy-udpipe", # This instead is needed for the UDPipe tokenizer (Czech).
 ]
 classifiers = [
   # prevents upload to PyPi

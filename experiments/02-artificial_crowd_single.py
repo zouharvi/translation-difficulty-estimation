@@ -81,7 +81,7 @@ results = {}
 # apply scorers to the whole data
 for model in models:
     for metric in metrics:
-        subsampling.misc.apply_artificial_crowd_metrics(
+        subsampling.misc.apply_internal_artificial_crowd_metrics(
             data, model=model, metric=metric
         )
         results[(model, metric)] = difficulty_sampling.evaluate.main_eval_avg(

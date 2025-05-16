@@ -1,8 +1,10 @@
 import logging
 from argparse import Namespace
+from typing import List, Dict
 
 import spacy
 from spacy.tokens import Token, Doc
+from spacy_udpipe import load as udpipe_load
 
 from difficulty_sampling.data import Data
 
@@ -43,10 +45,36 @@ def compute_dependency_tree_height(doc: Doc) -> int:
     return max(compute_token_depth(token) for token in doc)
 
 
+def get_src_lang2nlp(lps: List[str]) -> Dict:
+    """
+    Get a mapping of source languages to their corresponding NLP models.
+
+    Args:
+        lps (List[str]): List of language pairs.
+
+    Returns:
+        Dict: Mapping of source languages to their corresponding NLP models.
+    """
+    src_lang2nlp = dict()
+    for lp in lps:
+        src_lang = lp.split("-")[0]
+        if src_lang != "en" and src_lang != "ja" and src_lang != "cs":
+            raise ValueError(
+                f"Language '{src_lang}' not supported! Supported languages: 'en', 'ja', 'cs'."
+            )
+        if src_lang not in src_lang2nlp:
+            # udpipe_load gives tokenization + UD parsing for Czech
+            src_lang2nlp[src_lang] = (
+                spacy.load(f"{src_lang}_core_web_sm")
+                if src_lang != "cs"
+                else udpipe_load("cs")
+            )
+    return src_lang2nlp
+
+
 def syntactic_complexity_score(
     data: Data,
     scorer_name: str = "syntactic_complexity",
-    model_name: str = "en_core_web_sm",
     score_all_source_texts: bool = False,
 ) -> Data:
     """
@@ -61,22 +89,19 @@ def syntactic_complexity_score(
     Args:
         data: Data to score.
         scorer_name: Name to assign to the syntactic complexity score. Default: "syntactic_complexity".
-        model_name: spaCy model to use for dependency parsing. Default: "en_core_web_sm".
         score_all_source_texts: If True, score all source texts regardless of language pair. Default: False.
 
     Returns:
         Data: The input data with an additional score (`scorer_name`) for each MT system.
     """
-    logger.info(f"Loading spaCy model: {model_name}.")
-    nlp = spacy.load(model_name)
-
+    src_lang2nlp = get_src_lang2nlp(data.lps)
     src_lang2scores = (
         {lp.split("-")[0]: [] for lp in data.lps}
         if not score_all_source_texts
         else None
     )
 
-    logger.info("Computing syntactic complexity scores for each source text...")
+    logger.info("Computing Syntactic Complexity scores for each source text...")
     for lp, src_data_list in data.lp2src_data_list.items():
         src_lang = lp.split("-")[0]
         for src_idx, sample in enumerate(src_data_list):
@@ -84,15 +109,57 @@ def syntactic_complexity_score(
                 for scorer_name2score in sample["scores"].values():
                     scorer_name2score[scorer_name] = src_lang2scores[src_lang][src_idx]
             else:
-                doc = nlp(sample["src"])
+                doc = src_lang2nlp[src_lang](sample["src"])
                 height = compute_dependency_tree_height(doc)
                 score = -height
                 for scorer_name2score in sample["scores"].values():
                     scorer_name2score[scorer_name] = score
                 if not score_all_source_texts:
                     src_lang2scores[src_lang].append(score)
-    logger.info("Syntactic complexity scoring complete.")
 
+    logger.info("Syntactic Complexity scoring complete.")
+    return data
+
+
+def src_len_score(
+    data: Data,
+    scorer_name: str = "src_len",
+    score_all_source_texts: bool = False,
+) -> Data:
+    """
+    Score the input data using the source sentence length (number of tokens).
+
+    Args:
+        data: Data to score.
+        scorer_name: Name to assign to the source length score. Default: "src_len".
+        score_all_source_texts: If True, score all source texts regardless of language pair. Default: False.
+
+    Returns:
+        Data: The input data with an additional score (`scorer_name`) for each MT system.
+    """
+    src_lang2nlp = get_src_lang2nlp(data.lps)
+    src_lang2scores = (
+        {lp.split("-")[0]: [] for lp in data.lps}
+        if not score_all_source_texts
+        else None
+    )
+
+    logger.info("Computing Source Length scores for each source text...")
+    for lp, src_data_list in data.lp2src_data_list.items():
+        src_lang = lp.split("-")[0]
+        for src_idx, sample in enumerate(src_data_list):
+            if not score_all_source_texts and len(src_lang2scores[src_lang]) > src_idx:
+                for scorer_name2score in sample["scores"].values():
+                    scorer_name2score[scorer_name] = src_lang2scores[src_lang][src_idx]
+            else:
+                doc = src_lang2nlp[src_lang](sample["src"])
+                score = -len(doc)
+                for scorer_name2score in sample["scores"].values():
+                    scorer_name2score[scorer_name] = score
+                if not score_all_source_texts:
+                    src_lang2scores[src_lang].append(score)
+
+    logger.info("Source Length scoring complete.")
     return data
 
 

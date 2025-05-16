@@ -122,6 +122,8 @@ METHOD_TO_NAME = {
     "artcrowd|GPT-4|XCOMET-QE": "Internal Artificial Crowd (XCOMET-QE-XXL)",
     "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "External Artificial Crowd (MetricX-24-Hybrid-QE-XXL)",
     "ext_artcrowd|XCOMET-QE-XXL": "External Artificial Crowd (XCOMET-QE-XXL)",
+    "LLM-as-a-Judge (Command A)": "LLM-as-a-Judge (Command A)",
+    "LLM-as-a-Judge (GPT-4o)": "LLM-as-a-Judge (GPT-4o)",
 }
 
 with open(
@@ -143,8 +145,9 @@ with open(
         print(
             f"{method_name:>20}{'*' if is_method_tgt_lang_dep else ''}",
             f"{results.avg_score:.1f}",
-            f"{results.diff_corr:.3f}",
-            f"{results.avg_perfect:.1%}".replace("%", "\\%"),
+            f"{results.diff_tau:.3f}",
+            f"{results.diff_pearson:.3f}",
+            f"{(results.avg_easy * 100):.1f}%".replace("%", "\\%"),
             sep=" & ",
             end=" \\\\\n",
             file=f,
@@ -255,34 +258,40 @@ if RUN_STAT_SIGN_ON_DIFFCORR:
         list(data.lp2src_data_list), k=K, corr_fcn=corr_fcn_for_diff
     )
 
-    new_results = diff_corr_tasks.Run(data, list(METHOD_TO_NAME), METHOD_TO_NAME)
+    new_results = diff_corr_tasks.Run(
+        data, [method for method in METHOD_TO_NAME if method != "human"], METHOD_TO_NAME
+    )
     if K > 0:
         avg_corrs, matrix = new_results.AverageCorrMatrix(wts)
     else:
         avg_corrs = new_results.AverageCorrs(wts)
 
     with open(
-        difficulty_sampling.ROOT / f"generated/diff_corr_table_{protocol}.txt", "w"
+        difficulty_sampling.ROOT
+        / f"generated/diff_corr_table_{corr_fcn_for_diff}_{protocol}.txt",
+        "w",
     ) as f:
         table = new_results.Table(
             metrics=list(avg_corrs),
             initial_column=avg_corrs,
             initial_column_header="avg-corr",
             attr_list=["lang", "corr_fcn"],
-            nicknames={"kendall": "DiffCorr"},
+            nicknames={corr_fcn_for_diff: f"DiffCorr ({corr_fcn_for_diff})"},
             fmt="text",
         )
         f.write(table)
 
     with open(
-        difficulty_sampling.ROOT / f"generated/diff_corr_table_{protocol}.tex", "w"
+        difficulty_sampling.ROOT
+        / f"generated/diff_corr_table_{corr_fcn_for_diff}_{protocol}.tex",
+        "w",
     ) as f:
         table = new_results.Table(
             metrics=list(avg_corrs),
             initial_column=avg_corrs,
             initial_column_header="avg-corr",
             attr_list=["lang", "corr_fcn"],
-            nicknames={"kendall": "DiffCorr"},
+            nicknames={corr_fcn_for_diff: f"DiffCorr ({corr_fcn_for_diff})"},
             fmt="latex",
         )
         f.write(table)
