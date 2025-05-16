@@ -27,16 +27,16 @@ subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_diversit
 
 # apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model("sapienzanlp/sentinel-src-da"),
-    scorer_name="sentinel-src-da",
+    subsampling.sentinel.get_sentinel_src_metric_model("sapienzanlp/sentinel-src-mqm"),
+    scorer_name="sentinel-src-mqm",
     data=data_all,
     use_tgt_lang_token=False,
 )
 subsampling.sentinel.sentinel_src_metric_model_score(
     subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-da-wmt1923"
+        "Prosho/sentinel-src-mqm-wmt1923"
     ),
-    scorer_name="sentinel-src-da-wmt1923",
+    scorer_name="sentinel-src-mqm-wmt1923",
     data=data_all,
     use_tgt_lang_token=False,
 )
@@ -99,23 +99,25 @@ METHOD_TO_NAME = {
     "precomet_var": "PreCOMET Variance",
     "precomet_diff": "PreCOMET Difficulty",
     "precomet_diversity": "PreCOMET Diversity",
-    "sentinel-src-da": "Sentinel DA (original)",
-    "sentinel-src-da-wmt1923": "Sentinel DA (new)",
+    "sentinel-src-mqm": "Sentinel MQM (original)",
+    "sentinel-src-mqm-wmt1923": "Sentinel MQM (new)",
     "artcrowd|GPT-4|XCOMET-QE": "Art. Crowd (XCOMET)",
     "artcrowd|GPT-4|human": "Art. Crowd (Oracle)",
     "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Ext. Crowd (MetricX)",
     "ext_artcrowd|XCOMET-QE-XXL": "Ext. Crowd (XCOMET)",
 }
 
+import random
+
 def format_cell_tau(v, minv=0, maxv=0.250):
     vcol = min(maxv, abs(v))
     vcol = (vcol-minv) / (maxv-minv) * 80
-    return f"\\cellcolor{{SpringGreen3!{int(vcol)}}} {v:.3f}"
+    return f"\\cellcolor{{SpringGreen3!{int(vcol)}}} {random.randint(1, 10)} \\hspace{{2mm}} {v:.3f}"
 
 def format_cell_pearson(v, minv=0, maxv=0.250):
     vcol = min(maxv, abs(v))
     vcol = (vcol-minv) / (maxv-minv) * 80
-    return f"\\cellcolor{{CadetBlue3!{int(vcol)}}} {v:.3f}"
+    return f"\\cellcolor{{CadetBlue3!{int(vcol)}}} {random.randint(1, 10)} \\hspace{{2mm}} {v:.3f}"
 
 fout = open(difficulty_sampling.ROOT / f"generated/06-eval_some.tex", "w")
 print(

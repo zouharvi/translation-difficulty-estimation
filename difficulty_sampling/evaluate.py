@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 eval_clu_cor = subset2evaluate.evaluate.eval_clucor
 
 MainResult = collections.namedtuple(
-    "MainResult", ["avg_score", "avg_easy", "diff_tau", "diff_pearson"]
+    "MainResult", ["avg_score", "avg_perfect", "diff_tau", "diff_pearson"]
 )
 
 
@@ -56,29 +56,30 @@ def main_eval(
             for src_data in src_data_list
         ]
         # Subsample according to average scores extracted from the input method.
-        filtered_src_data_list: List[SrcData] = [
+        src_data_budget: List[SrcData] = [
             src_data
             for (src_data, avg_score) in sorted(
                 list(zip(src_data_list, avg_method_scores)), key=lambda pair: pair[1]
             )[:budget]
         ]
     else:
-        filtered_src_data_list: List[SrcData] = [
+        src_data_budget: List[SrcData] = [
             src_data_list[src_idx] for src_idx in sorted_src_data_ids[:budget]
         ]
 
     result_avg_score = np.average(
         [
-            method_name2score["human"]
-            for src_data in filtered_src_data_list
-            for method_name2score in src_data["scores"].values()
+            line["scores"][sys]["human"]
+            for line in src_data_budget
+            for sys in line["scores"].keys()
         ]
     )
 
     # result_clusters = subset2evaluate.evaluate.eval_subset_clusters(data_new, "human")
-    result_avg_easy = np.average([
-        np.average([line["scores"][sys]["human"] >= 90 for sys in line["scores"].keys()]) >= 0.5
-        for line in src_data_list
+    result_avg_perfect = np.average([
+        line["scores"][sys]["human"] >= 95
+        for line in src_data_budget
+        for sys in line["scores"].keys()
     ])
 
     result_diff_tau = []
@@ -120,7 +121,7 @@ def main_eval(
 
     return MainResult(
         avg_score=result_avg_score,
-        avg_easy=result_avg_easy,
+        avg_perfect=result_avg_perfect,
         diff_tau=result_diff_tau,
         diff_pearson=result_diff_pearson,
     )
@@ -256,7 +257,7 @@ def main_eval_avg(
     # Average results per language pair.
     return MainResult(
         avg_score=np.average([x.avg_score for x in results]),
-        avg_easy=np.average([x.avg_easy for x in results]),
+        avg_perfect=np.average([x.avg_perfect for x in results]),
         diff_tau=np.average([x.diff_tau for x in results]),
         diff_pearson=np.average([x.diff_pearson for x in results]),
     )

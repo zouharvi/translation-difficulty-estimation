@@ -29,7 +29,7 @@ subsampling.syntactic_complexity.syntactic_complexity_score(
 subsampling.misc.apply_external_artificial_crowd_metrics(
     data,
     sys2translations_path=Path(
-        "../data/artificial_crowd/scored_translations/sys2translations.pickle"
+        "../data/external_artificial_crowd/scored_translations/sys2translations.pickle"
     ),
     metric="MetricX-24-Hybrid-QE-XXL", 
 )
@@ -53,14 +53,14 @@ subsampling.misc.apply_llm_as_a_judge(
 import matplotlib.pyplot as plt
 import difficulty_sampling.utils
 import importlib
-importlib.reload(difficulty_sampling.utils)
+importlib.reload(difficulty_sampling.evaluate)
 
 difficulty_sampling.utils.matplotlib_default()
 
 METHOD_TO_NAME = {
     "random": "Random",
     "LLM-as-a-Judge (Command-A_new, src-based)": "LLM-as-a-Judge",
-    "syntactic_complexity": "Syntactic Complexity",
+    "syntactic_complexity": "Syntax Complexity",
     "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Artificial Crowd",
     "sentinel-src-mqm-wmt1923": "Sentinel",
     "human": "Oracle",
@@ -97,14 +97,14 @@ for method, method_name in METHOD_TO_NAME.items():
     )
     axs[1].plot(
         data_x,
-        [y.avg_easy for y in data_y],
+        [y.avg_perfect for y in data_y],
         label=method_name,
         color=METHOD_TO_COLOR[method],
         linewidth=2,
     )
 
 axs[0].set_ylabel("Average Score")
-axs[1].set_ylabel("% easy")
+axs[1].set_ylabel("%Perfect")
 
 for ax in axs.flatten():
     ax.set_xticks(data_x[::2])
@@ -120,24 +120,29 @@ axs[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x*100)}%"
 handles = axs[0].get_legend_handles_labels()
 
 for method, coords0, coords1 in [
-    ("human", (0.2, 0.23), (0.2, 0.12)),
-    ("sentinel-src-mqm-wmt1923", (0.04, 0.52), (0.04, 0.29)),
-    ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", (0.04, 0.76), (0.04, 0.66)),
+    ("human", (0.2, 0.23), (0.22, 0.11)),
+    ("sentinel-src-mqm-wmt1923", (0.04, 0.52), (0.04, 0.32)),
+    ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", (0.04, 0.76), (0.04, 0.53)),
+    ("syntactic_complexity", None, (0.04, 0.67)),
+    ("LLM-as-a-Judge (Command-A_new, src-based)", None, (0.4, 0.85)),
+    ("random", None, (0.04, 0.85)),
 ]:
-    axs[0].text(
-        coords0[0], coords0[1],
-        METHOD_TO_NAME[method].replace("Artificial", "Art."),
-        fontsize=9,
-        color=METHOD_TO_COLOR[method],
-        transform=axs[0].transAxes,
-    )
-    axs[1].text(
-        coords1[0], coords1[1],
-        METHOD_TO_NAME[method].replace("Artificial", "Art."),
-        fontsize=9,
-        color=METHOD_TO_COLOR[method],
-        transform=axs[1].transAxes,
-    )
+    if coords0 is not None:
+        axs[0].text(
+            coords0[0], coords0[1],
+            METHOD_TO_NAME[method].replace("Artificial", "Art."),
+            fontsize=8,
+            color=METHOD_TO_COLOR[method],
+            transform=axs[0].transAxes,
+        )
+    if coords1 is not None:
+        axs[1].text(
+            coords1[0], coords1[1],
+            METHOD_TO_NAME[method].replace("Artificial", "Art."),
+            fontsize=8,
+            color=METHOD_TO_COLOR[method],
+            transform=axs[1].transAxes,
+        )
 
 
 plt.tight_layout(pad=0)
