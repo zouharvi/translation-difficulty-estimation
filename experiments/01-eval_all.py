@@ -19,11 +19,11 @@ from difficulty_sampling import DiffCorrTasks
 SINGLE_SRC_SUBSET = False
 
 RUN_STAT_SIGN_ON_DIFFCORR, K = True, 0
+corr_fcn_for_diff: Literal["kendall", "pearson"] = "kendall"
 
 protocol: Literal["esa", "mqm"] = "esa"
-lps = difficulty_sampling.wmt24_lps_esa
 data = difficulty_sampling.data.Data.load(
-    dataset_name="wmt24", lps=lps, domains="all", protocol=protocol
+    dataset_name="wmt24", lps=["all"], domains="all", protocol=protocol
 )
 domains = ["news", "social", "literary", "speech"]
 
@@ -31,26 +31,9 @@ score_all_source_texts = True
 
 # apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model("sapienzanlp/sentinel-src-da"),
-    scorer_name="sentinel-src-da",
-    data=data,
-    use_tgt_lang_token=False,
-    score_all_source_texts=score_all_source_texts,
-)
-subsampling.sentinel.sentinel_src_metric_model_score(
     subsampling.sentinel.get_sentinel_src_metric_model("sapienzanlp/sentinel-src-mqm"),
     scorer_name="sentinel-src-mqm",
     data=data,
-    use_tgt_lang_token=False,
-    score_all_source_texts=score_all_source_texts,
-)
-subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-da-wmt1723"
-    ),
-    scorer_name="sentinel-src-da-wmt1723",
-    data=data,
-    use_tgt_lang_token=False,
     score_all_source_texts=score_all_source_texts,
 )
 subsampling.sentinel.sentinel_src_metric_model_score(
@@ -59,167 +42,88 @@ subsampling.sentinel.sentinel_src_metric_model_score(
     ),
     scorer_name="sentinel-src-mqm-wmt1723",
     data=data,
-    use_tgt_lang_token=False,
     score_all_source_texts=score_all_source_texts,
 )
-subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-da-wmt1923"
-    ),
-    scorer_name="sentinel-src-da-wmt1923",
-    data=data,
-    use_tgt_lang_token=False,
-    score_all_source_texts=score_all_source_texts,
+subsampling.misc.apply_oracle_with_fixed_scores(
+    data, scorer_name="oracle_with_fixed_scores", use_tgt_lang=False
 )
-subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-mqm-wmt1923"
-    ),
-    scorer_name="sentinel-src-mqm-wmt1923",
-    data=data,
-    use_tgt_lang_token=False,
-    score_all_source_texts=score_all_source_texts,
+subsampling.misc.apply_oracle_with_fixed_scores(
+    data, scorer_name="oracle_with_fixed_scores_tgt", use_tgt_lang=True
 )
-subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-da-z-norm-per-sys"
-    ),
-    scorer_name="sentinel-src-da-z-norm-per-sys",
-    data=data,
-    use_tgt_lang_token=False,
-    score_all_source_texts=score_all_source_texts,
-)
-subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-mqm-z-norm-per-sys"
-    ),
-    scorer_name="sentinel-src-mqm-z-norm-per-sys",
-    data=data,
-    use_tgt_lang_token=False,
-    score_all_source_texts=score_all_source_texts,
-)
-"""
 subsampling.misc.apply_subset2evaluate(data, method="random")
-subsampling.misc.apply_src_len(data)
+# subsampling.misc.apply_src_len(data)
 subsampling.syntactic_complexity.syntactic_complexity_score(
     data,
     "syntactic_complexity",
-    score_all_source_texts=protocol == "mqm",
+    score_all_source_texts=score_all_source_texts,
+)
+subsampling.syntactic_complexity.src_len_score(
+    data,
+    "src_len",
+    score_all_source_texts=score_all_source_texts,
 )
 subsampling.negative_word_frequency.negative_word_frequency_score(
     data,
     "negative_word_frequency",
-    score_all_source_texts=protocol == "mqm",
+    score_all_source_texts=score_all_source_texts,
 )
-subsampling.negative_word_frequency.negative_word_frequency_score(
-    data,
-    "negative_word_zipf_frequency",
-    score_all_source_texts=protocol == "mqm",
-)
-subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_avg")
-subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_var")
 subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_diff")
 subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_diversity")
-subsampling.misc.apply_artificial_crowd_metrics(
+subsampling.misc.apply_internal_artificial_crowd_metrics(
     data, model="GPT-4", metric="MetricX-24-Hybrid-QE"
 )
-subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="XCOMET-QE")
-subsampling.misc.apply_artificial_crowd_metrics(data, model="GPT-4", metric="human")
+subsampling.misc.apply_internal_artificial_crowd_metrics(
+    data, model="GPT-4", metric="XCOMET-QE"
+)
 subsampling.misc.apply_external_artificial_crowd_metrics(
     data,
     sys2translations_path=Path(
-        "../data/external_artificial_crowd/scored_translations/sys2translations.pickle"
+        "../data/external_artificial_crowd/sys2translations.pickle"
     ),
     metric="MetricX-24-Hybrid-QE-XXL",
+    protocol=protocol,
 )
 subsampling.misc.apply_external_artificial_crowd_metrics(
     data,
     sys2translations_path=Path(
-        "../data/external_artificial_crowd/scored_translations/sys2translations.pickle"
+        "../data/external_artificial_crowd/sys2translations.pickle"
     ),
     metric="XCOMET-QE-XXL",
-)
-subsampling.misc.apply_external_artificial_crowd_metrics(
-    data,
-    sys2translations_path=Path(
-        "../data/external_artificial_crowd/scored_translations/sys2translations.pickle"
-    ),
-    metric="CometKiwi-XXL",
+    protocol=protocol,
 )
 subsampling.misc.apply_llm_as_a_judge(
     data,
     scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/old/wmt_data_with_source_based_num_scores.csv"
+        f"../data/LLM-as-a-Judge/{protocol}/command-a/command-a-03-2025_source_based_num_scores.csv"
     ),
-    llm_name="Command-A_old",
+    llm_name="Command A",
 )
 subsampling.misc.apply_llm_as_a_judge(
     data,
     scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/old/wmt_data_with_target_based_num_scores.csv"
-    ),
-    llm_name="Command-A_old",
-)
-subsampling.misc.apply_llm_as_a_judge(
-    data,
-    scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/new/command-a/wmt_data_with_source_based_num_scores.csv"
-    ),
-    llm_name="Command-A_new",
-)
-subsampling.misc.apply_llm_as_a_judge(
-    data,
-    scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/new/command-a/wmt_data_with_target_based_num_scores.csv"
-    ),
-    llm_name="Command-A_new",
-)
-subsampling.misc.apply_llm_as_a_judge(
-    data,
-    scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/new/gpt-4o/gpt-4o-1120_source_based_num_scores.csv"
+        f"../data/LLM-as-a-Judge/{protocol}/gpt-4o/gpt-4o-1120_source_based_num_scores.csv"
     ),
     llm_name="GPT-4o",
 )
-subsampling.misc.apply_llm_as_a_judge(
-    data,
-    scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/new/gpt-4o/gpt-4o-1120_target_based_num_scores.csv"
-    ),
-    llm_name="GPT-4o",
-)
-"""
 
-# %%
 METHOD_TO_NAME = {
-    # "random": "Random",
-    # "human": "Oracle",
-    # "src_len": "Source Length",
-    # "syntactic_complexity": "Syntactic Complexity",
-    # "negative_word_frequency": "Negative Word Frequency",
-    # "negative_word_zipf_frequency": "Negative Word Zipf Frequency",
-    # "precomet_avg": "PreCOMET Average",
-    # "precomet_var": "PreCOMET Variance",
-    # "precomet_diff": "PreCOMET Difficulty",
-    # "precomet_diversity": "PreCOMET Diversity",
-    "sentinel-src-da": "Sentinel-DA",
-    "sentinel-src-da-wmt1723": "Sentinel-DA-WMT1723",
-    "sentinel-src-da-wmt1923": "Sentinel-DA-WMT1923",
-    "sentinel-src-da-z-norm-per-sys": "Sentinel-DA-znorm-per-sys",
+    "random": "Random",
+    "human": "Oracle",
+    "oracle_with_fixed_scores": "Oracle with Fixed Scores",
+    "oracle_with_fixed_scores_tgt": "Oracle with Fixed Scores (Tgt)",
+    "src_len": "Source Length",
+    "syntactic_complexity": "Syntactic Complexity",
+    "negative_word_frequency": "Negative Word Frequency",
+    "precomet_diff": "PreCOMET Difficulty",
+    "precomet_diversity": "PreCOMET Diversity",
     "sentinel-src-mqm": "Sentinel-MQM",
     "sentinel-src-mqm-wmt1723": "Sentinel-MQM-WMT1723",
-    "sentinel-src-mqm-wmt1923": "Sentinel-MQM-WMT1923",
-    "sentinel-src-mqm-z-norm-per-sys": "Sentinel-MQM-znorm-per-sys",
-    # "artcrowd|GPT-4|MetricX-24-Hybrid-QE": "Artificial Crowd (MetricX-24-Hybrid-QE-XXL)",
-    # "artcrowd|GPT-4|XCOMET-QE": "Artificial Crowd (XCOMET-QE-XXL)",
-    # "artcrowd|GPT-4|human": "Artificial Crowd (Oracle)",
-    # "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "External Artificial Crowd (MetricX-24-Hybrid-QE-XXL)",
-    # "ext_artcrowd|XCOMET-QE-XXL": "External Artificial Crowd (XCOMET-QE-XXL)",
-    # "ext_artcrowd|CometKiwi-XXL": "External Artificial Crowd (CometKiwi-XXL)",
+    "artcrowd|GPT-4|MetricX-24-Hybrid-QE": "Internal Artificial Crowd (MetricX-24-Hybrid-QE-XXL)",
+    "artcrowd|GPT-4|XCOMET-QE": "Internal Artificial Crowd (XCOMET-QE-XXL)",
+    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "External Artificial Crowd (MetricX-24-Hybrid-QE-XXL)",
+    "ext_artcrowd|XCOMET-QE-XXL": "External Artificial Crowd (XCOMET-QE-XXL)",
 }
 
-
-"""
 with open(
     difficulty_sampling.ROOT
     / f"generated/{'01-gen_mt_like_eval' if SINGLE_SRC_SUBSET else '01-eval_all'}_{protocol}.tex",
@@ -248,47 +152,27 @@ with open(
         )
 
     for method_name, is_method_tgt_lang_dep in [
-        #("random", False),
-        #("human", True),
-        #("src_len", False),
-        #("syntactic_complexity", False),
-        #("negative_word_frequency", False),
-        #("negative_word_zipf_frequency", False),
-        #("precomet_avg", False),
-        #("precomet_var", False),
-        #("precomet_diff", False),
-        #("precomet_diversity", False),
-        ("sentinel-src-da", False),
-        ("sentinel-src-da-more-data", False),
-        ("sentinel-src-da-z-norm-per-sys", False),
-        ("sentinel-src-da-z-norm-per-sys-no-domain", False),
-        ("sentinel-src-da-beta", False),
-        ("sentinel-src-da-beta-no-domain", False),
+        ("random", False),
+        ("human", True),
+        ("oracle_with_fixed_scores", False),
+        ("oracle_with_fixed_scores_tgt", True),
+        ("src_len", False),
+        ("syntactic_complexity", False),
+        ("negative_word_frequency", False),
+        ("precomet_diff", False),
+        ("precomet_diversity", False),
         ("sentinel-src-mqm", False),
-        ("sentinel-src-mqm-z-norm-more-data", False),
-        ("sentinel-src-mqm-from-da-more-data", False),
-        ("sentinel-src-mqm-z-norm-per-sys", False),
-        ("sentinel-src-mqm-z-norm-per-sys-no-domain", False),
-        ("sentinel-src-mqm-beta", False),
-        ("sentinel-src-mqm-beta-no-domain", False),
-        ("sentinel-src-da-for-genmt25", False),
-        ("sentinel-src-mqm-for-genmt25", False),
-        # ("artcrowd|GPT-4|MetricX-24-Hybrid-QE", True),
-        # ("artcrowd|GPT-4|XCOMET-QE", True),
-        # ("artcrowd|GPT-4|human", True),
-        # ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", True),
-        # ("ext_artcrowd|XCOMET-QE-XXL", True),
-        # ("ext_artcrowd|CometKiwi-XXL", True),
-        # ("LLM-as-a-Judge (Command-A_old, src-based)", False),
-        # ("LLM-as-a-Judge (Command-A_old, tgt-based)", True),
-        # ("LLM-as-a-Judge (Command-A_new, src-based)", False),
-        # ("LLM-as-a-Judge (Command-A_new, tgt-based)", True),
-        # ("LLM-as-a-Judge (GPT-4o, src-based)", False),
-        # ("LLM-as-a-Judge (GPT-4o, tgt-based)", True),
+        ("sentinel-src-mqm-wmt1723", False),
+        ("artcrowd|GPT-4|MetricX-24-Hybrid-QE", True),
+        ("artcrowd|GPT-4|XCOMET-QE", True),
+        ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", True),
+        ("ext_artcrowd|XCOMET-QE-XXL", True),
+        ("LLM-as-a-Judge (Command A)", False),
+        ("LLM-as-a-Judge (GPT-4o)", False),
     ]:
         eval_print_table(method_name, is_method_tgt_lang_dep)
 
-
+"""
 with open(
     difficulty_sampling.ROOT
     / f"generated/{'01-gen_mt_like_eval_domains' if SINGLE_SRC_SUBSET else '01-eval_all_domains'}_{protocol}.tex",
@@ -348,42 +232,28 @@ with open(
     for method_name, is_method_tgt_lang_dep in [
         ("random", False),
         ("human", True),
+        ("oracle_with_fixed_scores", False),
+        ("oracle_with_fixed_scores_tgt", True),
         ("src_len", False),
         ("syntactic_complexity", False),
         ("negative_word_frequency", False),
-        ("negative_word_zipf_frequency", False),
-        ("precomet_avg", False),
-        ("precomet_var", False),
         ("precomet_diff", False),
         ("precomet_diversity", False),
-        ("sentinel-src-da", False),
-        ("sentinel-src-da-more-data", False),
-        ("sentinel-src-da-z-norm-per-sys", False),
-        ("sentinel-src-da-z-norm-per-sys-no-domain", False),
-        ("sentinel-src-da-beta", False),
-        ("sentinel-src-da-beta-no-domain", False),
         ("sentinel-src-mqm", False),
-        ("sentinel-src-mqm-z-norm-more-data", False),
-        ("sentinel-src-mqm-from-da-more-data", False),
-        ("sentinel-src-mqm-z-norm-per-sys", False),
-        ("sentinel-src-mqm-z-norm-per-sys-no-domain", False),
-        ("sentinel-src-mqm-beta", False),
-        ("sentinel-src-mqm-beta-no-domain", False),
-        ("sentinel-src-da-for-genmt25", False),
-        ("sentinel-src-mqm-for-genmt25", False)
-        # ("artcrowd|GPT-4|MetricX-24-Hybrid-QE", True),
-        # ("artcrowd|GPT-4|XCOMET-QE", True),
-        # ("artcrowd|GPT-4|human", True),
-        # ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", True),
-        # ("ext_artcrowd|XCOMET-QE-XXL", True),
-        # ("ext_artcrowd|CometKiwi-XXL", True),
+        ("sentinel-src-mqm-wmt1723", False),
+        ("artcrowd|GPT-4|MetricX-24-Hybrid-QE", True),
+        ("artcrowd|GPT-4|XCOMET-QE", True),
+        ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", True),
+        ("ext_artcrowd|XCOMET-QE-XXL", True),
+        ("LLM-as-a-Judge (Command A)", False),
+        ("LLM-as-a-Judge (GPT-4o)", False),
     ]:
         eval_print_table(method_name, is_method_tgt_lang_dep)
 """
 
 if RUN_STAT_SIGN_ON_DIFFCORR:
     diff_corr_tasks, wts = DiffCorrTasks.diff_correlations_on_wmt24(
-        list(data.lp2src_data_list), k=K
+        list(data.lp2src_data_list), k=K, corr_fcn=corr_fcn_for_diff
     )
 
     new_results = diff_corr_tasks.Run(data, list(METHOD_TO_NAME), METHOD_TO_NAME)
