@@ -142,7 +142,7 @@ METHOD_TO_COLOR = {
 
 difficulty_sampling.utils.matplotlib_default()
 
-fig, axs = plt.subplots(2, 1, figsize=(3.5, 3.8))
+fig, axs = plt.subplots(1, 2, figsize=(7.5, 2.5))
 
 # plot closest
 data_y_rand_closets_interval = [
@@ -212,77 +212,37 @@ axs[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.3f}'))
 
 axs[0].set_ylabel("Closest Neighbour\nCosine Similarity")
 axs[1].set_ylabel("Average Pairwise\nCosine Similarity")
+axs[0].set_xlabel("Proportion of original data")
 axs[1].set_xlabel("Proportion of original data")
 axs[0].set_ylim(0.434, None)
-
-handles = plt.gca().get_legend_handles_labels()
-
-plt.tight_layout(pad=0)
-plt.savefig("../generated/05-post_effect_src_diversity.pdf")
-plt.show()
-
-# %%
-
-
-plt.figure(figsize=(3.5, 2))
-
-data_y_rand_avg_interval = [
-    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
-    for l in np.array(list(results_avg_random.values())).T
-]
-
-plt.fill_between(
-    data_x,
-    [x[0] for x in data_y_rand_avg_interval],
-    [x[1] for x in data_y_rand_avg_interval],
-    color=METHOD_TO_COLOR["random"],
-    linewidth=0,
-    alpha=0.4,
-    zorder=-10,
-    # label="Random",
-)
-
-
-for method in METHOD_TO_COLOR.keys():
-    results_v = results_avg[method]
-    if method == "random":
-        continue
-    plt.plot(
-        data_x,
-        results_v,
-        label=METHOD_TO_NAME[method],
-        color=METHOD_TO_COLOR[method],
-        linewidth=2,
-    )
-
-
 
 handles, handles_txt = plt.gca().get_legend_handles_labels()
 
 plt.tight_layout(pad=0)
-plt.savefig("../generated/05-post_effect_src_diversity_avg.pdf")
+# negative spacing between subplots
+plt.subplots_adjust(wspace=0.25)
+plt.savefig("../generated/05-post_effect_src_diversity.pdf")
 plt.show()
 
 # %%
 # plot just the legend
-import copy
 
 # fix the line for Random
+import copy
 handle_random = copy.deepcopy(handles[0])
 handle_random.set_color(METHOD_TO_COLOR["random"])
 
 
-plt.figure(figsize=(3.5, 0.4))
+plt.figure(figsize=(7.5, 0.4))
 plt.legend(
     [handle_random] + handles,
     ["Random"] + handles_txt,
     loc="center",
     fontsize=9,
-    ncol=3,
+    ncol=6,
     frameon=False,
     handlelength=0.7,
     handletextpad=0.5,
-    columnspacing=0.5,
 )
 plt.axis("off")
 plt.tight_layout(pad=0)

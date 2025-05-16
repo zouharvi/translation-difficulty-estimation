@@ -48,6 +48,25 @@ subsampling.misc.apply_oracle_with_fixed_scores(
 
 data_x = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
+# plot random spread
+data_y_rand_all = []
+for _ in range(10):
+    subsampling.misc.apply_subset2evaluate(data_all, method="random")
+    data_y = []
+    for p in data_x:
+        out = difficulty_sampling.evaluate.main_eval_avg(
+            "random",
+            data=data_all,
+            proportion=p,
+        )
+        data_y.append((out.avg_score, out.avg_perfect))
+    data_y_rand_all.append(data_y)
+
+data_y_rand_all = np.array(data_y_rand_all)
+
+# %%
+
+
 difficulty_sampling.utils.matplotlib_default()
 
 METHOD_TO_NAME = {
@@ -67,7 +86,7 @@ METHOD_TO_COLOR = {
     "LLM-as-a-Judge (Command-A)": difficulty_sampling.utils.COLORS[1],
 }
 
-fig, axs = plt.subplots(ncols=2, figsize=(7.5, 2), sharex=True)
+fig, axs = plt.subplots(ncols=2, figsize=(7.5, 2.5), sharex=True)
 
 for method, method_name in METHOD_TO_NAME.items():
     if method == "random":
@@ -98,21 +117,6 @@ for method, method_name in METHOD_TO_NAME.items():
     )
 
 
-# plot random spread
-data_y_rand_all = []
-for _ in range(10):
-    subsampling.misc.apply_subset2evaluate(data_all, method="random")
-    data_y = []
-    for p in data_x:
-        out = difficulty_sampling.evaluate.main_eval_avg(
-            "random",
-            data=data_all,
-            proportion=p,
-        )
-        data_y.append((out.avg_score, out.avg_perfect))
-    data_y_rand_all.append(data_y)
-
-data_y_rand_all = np.array(data_y_rand_all)
 data_y_rand_score = data_y_rand_all[:, :, 0].T
 data_y_rand_perfe = data_y_rand_all[:, :, 1].T
 data_y_rand_score_interval = [
@@ -159,15 +163,15 @@ axs[0].set_xlabel("Proportion of original data")
 axs[1].set_xlabel("Proportion of original data")
 axs[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x*100)}%"))
 
-handles = axs[0].get_legend_handles_labels()
+handles, handles_txt = axs[0].get_legend_handles_labels()
 
 for method, coords0, coords1 in [
     ("oracle-src", (0.17, 0.25), (0.2, 0.11)),
     ("sentinel-src-mqm-wmt1923", (0.04, 0.45), (0.3, 0.2)),
-    ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", (0.04, 0.65), (0.04, 0.4)),
+    ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", (0.04, 0.65), (0.04, 0.39)),
     ("syntactic_complexity", None, (0.04, 0.55)),
-    ("LLM-as-a-Judge (Command-A)", None, (0.4, 0.75)),
-    ("random", None, (0.05, 0.86)),
+    ("LLM-as-a-Judge (Command-A)", None, (0.4, 0.74)),
+    ("random", None, (0.05, 0.85)),
 ]:
     if coords0 is not None:
         axs[0].text(
@@ -195,15 +199,22 @@ plt.show()
 
 # %%
 
+# fix the line for Random
+import copy
+handle_random = copy.deepcopy(handles[0])
+handle_random.set_color(METHOD_TO_COLOR["random"])
+
+
 # plot just the legend
 plt.figure(figsize=(7.5, 0.4))
 plt.legend(
-    *handles,
+    [handle_random] + handles,
+    ["Random"] + handles_txt,
     loc="center",
     fontsize=9,
     ncol=6,
     frameon=False,
-    handlelength=1,
+    handlelength=0.7,
     handletextpad=0.5,
 )
 plt.axis("off")
