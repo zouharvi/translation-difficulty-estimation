@@ -49,3 +49,14 @@ def turn_off_spines(which=['top', 'right']):
 
     ax = plt.gca()
     ax.spines[which].set_visible(False)
+
+
+def confidence_interval(data, confidence=0.95):
+    import scipy.stats
+    import numpy as np
+    return scipy.stats.t.interval(
+        confidence=confidence,
+        df=len(data) - 1,
+        loc=np.mean(data),
+        scale=np.std(data)
+    )

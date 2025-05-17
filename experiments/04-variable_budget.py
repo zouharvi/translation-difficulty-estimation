@@ -1,89 +1,102 @@
 # %%
 
 from pathlib import Path
+import numpy as np
 import difficulty_sampling
 import difficulty_sampling.evaluate
 import difficulty_sampling.utils
 import difficulty_sampling.data
+import matplotlib.pyplot as plt
 import subsampling.sentinel
 import subsampling.syntactic_complexity
 import subsampling.negative_word_frequency
 import subsampling.misc
 
-
-data = difficulty_sampling.data.Data.load(
-    dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa"
-)
+data_all = difficulty_sampling.data.Data.load(dataset_name="wmt24", lps=["all"], domains="all", protocol="esa")
 
 # apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
     subsampling.sentinel.get_sentinel_src_metric_model("Prosho/sentinel-src-mqm-wmt1923"),
     scorer_name="sentinel-src-mqm-wmt1923",
-    data=data,
+    data=data_all,
     use_tgt_lang_token=True,
 )
-subsampling.misc.apply_subset2evaluate(data, method="random")
+subsampling.misc.apply_subset2evaluate(data_all, method="random")
 subsampling.syntactic_complexity.syntactic_complexity_score(
-    data, "syntactic_complexity"
+    data_all, "syntactic_complexity"
 )
 subsampling.misc.apply_external_artificial_crowd_metrics(
-    data,
+    data_all,
     sys2translations_path=Path(
-        "../data/artificial_crowd/scored_translations/sys2translations.pickle"
+        "../data/external_artificial_crowd/sys2translations.pickle"
     ),
     metric="MetricX-24-Hybrid-QE-XXL", 
 )
 subsampling.misc.apply_llm_as_a_judge(
-    data,
+    data_all,
     scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/new/command-a/wmt_data_with_source_based_num_scores.csv"
+        "../data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_source_based_num_scores.csv"
     ),
-    llm_name="Command-A_new",
+    llm_name="Command-A",
 )
-subsampling.misc.apply_llm_as_a_judge(
-    data,
-    scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/new/gpt-4o/gpt-4o-1120_source_based_num_scores.csv"
-    ),
-    llm_name="GPT-4o",
+subsampling.misc.apply_oracle_with_fixed_scores(
+    data_all,
+    scorer_name="oracle-src",
 )
-
 
 # %%
-import matplotlib.pyplot as plt
-import difficulty_sampling.utils
-import importlib
-importlib.reload(difficulty_sampling.utils)
+
+data_x = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+
+# plot random spread
+data_y_rand_all = []
+for _ in range(10):
+    subsampling.misc.apply_subset2evaluate(data_all, method="random")
+    data_y = []
+    for p in data_x:
+        out = difficulty_sampling.evaluate.main_eval_avg(
+            "random",
+            data=data_all,
+            proportion=p,
+        )
+        data_y.append((out.avg_score, out.avg_perfect))
+    data_y_rand_all.append(data_y)
+
+data_y_rand_all = np.array(data_y_rand_all)
+
+# %%
+
 
 difficulty_sampling.utils.matplotlib_default()
 
 METHOD_TO_NAME = {
     "random": "Random",
-    "LLM-as-a-Judge (Command-A_new, src-based)": "LLM-as-a-Judge",
-    "syntactic_complexity": "Syntactic Complexity",
+    "LLM-as-a-Judge (Command-A)": "LLM-as-a-Judge",
+    "syntactic_complexity": "Syntax Complexity",
     "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Artificial Crowd",
     "sentinel-src-mqm-wmt1923": "Sentinel",
-    "human": "Oracle",
+    "oracle-src": "Oracle",
 }
 METHOD_TO_COLOR = {
     "random": "black",
-    "human": difficulty_sampling.utils.COLORS[0],
+    "oracle-src": difficulty_sampling.utils.COLORS[0],
     "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
     "sentinel-src-mqm-wmt1923": difficulty_sampling.utils.COLORS[2],
     "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": difficulty_sampling.utils.COLORS[4],
-    "LLM-as-a-Judge (Command-A_new, src-based)": difficulty_sampling.utils.COLORS[1],
+    "LLM-as-a-Judge (Command-A)": difficulty_sampling.utils.COLORS[1],
 }
 
-fig, axs = plt.subplots(ncols=2, figsize=(7.5, 2), sharex=True)
+fig, axs = plt.subplots(ncols=2, figsize=(7.5, 2.5), sharex=True)
 
-data_x = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 for method, method_name in METHOD_TO_NAME.items():
+    if method == "random":
+        continue
     data_y = []
     for p in data_x:
         data_y.append(
             difficulty_sampling.evaluate.main_eval_avg(
                 method,
-                data=data,
+                data=data_all,
                 proportion=p,
             )
         )
@@ -97,14 +110,47 @@ for method, method_name in METHOD_TO_NAME.items():
     )
     axs[1].plot(
         data_x,
-        [y.avg_easy for y in data_y],
+        [y.avg_perfect for y in data_y],
         label=method_name,
         color=METHOD_TO_COLOR[method],
         linewidth=2,
     )
 
+
+data_y_rand_score = data_y_rand_all[:, :, 0].T
+data_y_rand_perfe = data_y_rand_all[:, :, 1].T
+data_y_rand_score_interval = [
+    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    for l in data_y_rand_score
+]
+data_y_rand_perfe_interval = [
+    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    for l in data_y_rand_perfe
+]
+
+axs[0].fill_between(
+    data_x,
+    [i[0] for i in data_y_rand_score_interval],
+    [i[1] for i in data_y_rand_score_interval],
+    color=METHOD_TO_COLOR["random"],
+    linewidth=0,
+    alpha=0.4,
+    zorder=-10,
+)
+axs[1].fill_between(
+    data_x,
+    [i[0] for i in data_y_rand_perfe_interval],
+    [i[1] for i in data_y_rand_perfe_interval],
+    color=METHOD_TO_COLOR["random"],
+    linewidth=0,
+    alpha=0.4,
+    zorder=-10,
+)
+
+
+
 axs[0].set_ylabel("Average Score")
-axs[1].set_ylabel("% easy")
+axs[1].set_ylabel("%Perfect")
 
 for ax in axs.flatten():
     ax.set_xticks(data_x[::2])
@@ -117,27 +163,32 @@ axs[0].set_xlabel("Proportion of original data")
 axs[1].set_xlabel("Proportion of original data")
 axs[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x*100)}%"))
 
-handles = axs[0].get_legend_handles_labels()
+handles, handles_txt = axs[0].get_legend_handles_labels()
 
 for method, coords0, coords1 in [
-    ("human", (0.2, 0.23), (0.2, 0.12)),
-    ("sentinel-src-mqm-wmt1923", (0.04, 0.52), (0.04, 0.29)),
-    ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", (0.04, 0.76), (0.04, 0.66)),
+    ("oracle-src", (0.17, 0.25), (0.2, 0.11)),
+    ("sentinel-src-mqm-wmt1923", (0.04, 0.45), (0.3, 0.2)),
+    ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", (0.04, 0.65), (0.04, 0.39)),
+    ("syntactic_complexity", None, (0.04, 0.55)),
+    ("LLM-as-a-Judge (Command-A)", None, (0.4, 0.74)),
+    ("random", None, (0.05, 0.85)),
 ]:
-    axs[0].text(
-        coords0[0], coords0[1],
-        METHOD_TO_NAME[method].replace("Artificial", "Art."),
-        fontsize=9,
-        color=METHOD_TO_COLOR[method],
-        transform=axs[0].transAxes,
-    )
-    axs[1].text(
-        coords1[0], coords1[1],
-        METHOD_TO_NAME[method].replace("Artificial", "Art."),
-        fontsize=9,
-        color=METHOD_TO_COLOR[method],
-        transform=axs[1].transAxes,
-    )
+    if coords0 is not None:
+        axs[0].text(
+            coords0[0], coords0[1],
+            METHOD_TO_NAME[method].replace("Artificial", "Art."),
+            fontsize=8,
+            color=METHOD_TO_COLOR[method],
+            transform=axs[0].transAxes,
+        )
+    if coords1 is not None:
+        axs[1].text(
+            coords1[0], coords1[1],
+            METHOD_TO_NAME[method].replace("Artificial", "Art."),
+            fontsize=8,
+            color=METHOD_TO_COLOR[method],
+            transform=axs[1].transAxes,
+        )
 
 
 plt.tight_layout(pad=0)
@@ -148,15 +199,22 @@ plt.show()
 
 # %%
 
+# fix the line for Random
+import copy
+handle_random = copy.deepcopy(handles[0])
+handle_random.set_color(METHOD_TO_COLOR["random"])
+
+
 # plot just the legend
 plt.figure(figsize=(7.5, 0.4))
 plt.legend(
-    *handles,
+    [handle_random] + handles,
+    ["Random"] + handles_txt,
     loc="center",
     fontsize=9,
     ncol=6,
     frameon=False,
-    handlelength=1,
+    handlelength=0.7,
     handletextpad=0.5,
 )
 plt.axis("off")

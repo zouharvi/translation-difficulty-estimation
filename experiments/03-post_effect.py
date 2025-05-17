@@ -15,9 +15,7 @@ import subsampling.sentinel
 from pathlib import Path
 from fastchrf import pairwise_chrf
 
-data_all = difficulty_sampling.data.Data.load(
-    dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa"
-)
+data_all = difficulty_sampling.data.Data.load(dataset_name="wmt24", lps=["all"], domains="all", protocol="esa")
 
 model = sentence_transformers.SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
@@ -35,8 +33,11 @@ import language_tool_python
 grammarcheck = language_tool_python.LanguageTool('en-US')
 src2error = list({
     line["src"]
-    for data in data_all.lp2src_data_list.values()
+    for data_name, data in data_all.lp2src_data_list.items()
     for line in data
+    # do this only for English
+    if data_name.split("-")[0] == "en"
+
 })
 src2error = {src: len(grammarcheck.check(src))/len(src.split()) for src in src2error}
 grammarcheck.close()
@@ -48,7 +49,7 @@ def symmetric_chrf(tgt1, tgt2):
     return (out[0][0][0]+out[1][0][0])/2
 
 # compute some protected attributes
-for data in tqdm.tqdm(list(data_all.lp2src_data_list.values())):
+for data_name, data in tqdm.tqdm(list(data_all.lp2src_data_list.items())):
     for line in data:
         output_unique = len({tgt for tgt in line["tgt"].values()})/len(line["tgt"])
         output_diversity_ip = np.average([
@@ -68,7 +69,7 @@ for data in tqdm.tqdm(list(data_all.lp2src_data_list.values())):
             "output_diversity_ip": output_diversity_ip,
             "output_diversity_chrf": output_diversity_chrf,
             "output_unique": output_unique,
-            "grammaticality": src2error[line["src"]],
+            "grammaticality": src2error[line["src"]] if data_name.split("-")[0] == "en" else None,
             "length": len(line["src"]),
         }
 
@@ -87,40 +88,42 @@ subsampling.syntactic_complexity.syntactic_complexity_score(
 subsampling.misc.apply_external_artificial_crowd_metrics(
     data_all,
     sys2translations_path=Path(
-        "../data/artificial_crowd/scored_translations/sys2translations.pickle"
+        "../data/external_artificial_crowd/sys2translations.pickle"
     ),
     metric="MetricX-24-Hybrid-QE-XXL", 
 )
 subsampling.misc.apply_llm_as_a_judge(
     data_all,
     scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/new/command-a/wmt_data_with_source_based_num_scores.csv"
+        "../data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_source_based_num_scores.csv"
     ),
-    llm_name="Command-A_new",
+    llm_name="Command-A",
 )
-subsampling.misc.apply_llm_as_a_judge(
+subsampling.misc.apply_oracle_with_fixed_scores(
     data_all,
-    scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/new/gpt-4o/gpt-4o-1120_source_based_num_scores.csv"
-    ),
-    llm_name="GPT-4o",
+    scorer_name="oracle-src",
 )
-
 
 # %%
 
 
 data_size = len(list(data_all.lp2src_data_list.values())[0])
 
-def avg_effect_across_langs(key):
+def avg_effect_across_langs(key, en_only=False):
     return [
-        np.average([data[i]["effect"][key] for data in data_all.lp2src_data_list.values()])
+        data[i]["effect"][key]
+        for data_name, data in data_all.lp2src_data_list.items()
+        if (not en_only) or (data_name.split("-")[0] == "en")
         for i in range(data_size)
     ]
 
-def avg_difficulty_across_langs(key):
+def avg_difficulty_across_langs(key, en_only=False):
     return [
-        np.average([np.average([data[i]["scores"][sys][key] for sys in data[i]["scores"].keys()]) for data in data_all.lp2src_data_list.values()])
+        np.average([
+            np.average([data[i]["scores"][sys][key] for sys in data[i]["scores"].keys()])
+            for data in data_all.lp2src_data_list.values()
+            if (not en_only) or (data_name.split("-")[0] == "en")
+        ])
         for i in range(data_size)
     ]
 
@@ -128,6 +131,12 @@ import collections
 METHOD_CORR = collections.defaultdict(dict)
 
 def plot_problem(ax, data_x, data_y, key_x, key_y):
+    # filter out None from data_y, but in parallel
+    data_x, data_y = zip(*[
+        (x, y)
+        for x, y in zip(data_x, data_y)
+        if x is not None and y is not None
+    ])
     ax.scatter(
         data_x, data_y,
         s=5,
@@ -160,11 +169,11 @@ def plot_problem(ax, data_x, data_y, key_x, key_y):
 
 METHOD_TO_NAME = {
     "random": "Random",
-    "LLM-as-a-Judge (Command-A_new, src-based)": "LLM-as-a-Judge",
+    "LLM-as-a-Judge (Command-A)": "LLM-as-a-Judge",
     "syntactic_complexity": "Syntactic Complexity",
     "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Artificial Crowd",
     "sentinel-src-mqm-wmt1923": "Sentinel",
-    "human": "Oracle",
+    "oracle-src": "Oracle",
 }
 
 fig, axss = plt.subplots(
@@ -207,7 +216,7 @@ for axs_i, (axs, (method, method_name)) in enumerate(zip(axss, METHOD_TO_NAME.it
 
     plot_problem(
         axs[4],
-        avg_effect_across_langs("grammaticality"),
+        avg_effect_across_langs("grammaticality", en_only=True),
         avg_difficulty_across_langs(method),
         key_x="grammar errors per word",
         key_y=method_name,
@@ -232,8 +241,6 @@ plt.show()
 
 fout = open("../generated/03-post_effect_corr.tex", "w")
 
-# import sys
-# fout = sys.stdout
 
 print("\\begin{tabular}{l" + "r" * len(METHOD_CORR["Oracle"]) + "} \n \\toprule", file=fout)
 METHODNAME_TO_SHORT = {
