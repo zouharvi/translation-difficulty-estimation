@@ -14,7 +14,7 @@ from difficulty_sampling.data import Data
 logger = logging.getLogger(__name__)
 
 
-wmt24_encs_my_systems_ranking = [
+wmt24_encs_mt_sys_ranking = [
     "Unbabel-Tower70B",
     "Claude-3.5",
     "ONLINE-W",
@@ -115,7 +115,7 @@ def apply_internal_artificial_crowd_metrics(
             )
             while metric2score_for_model is None:
                 assert lp == "en-cs"
-                curr_model = wmt24_encs_my_systems_ranking[back_off_model_idx]
+                curr_model = wmt24_encs_mt_sys_ranking[back_off_model_idx]
                 metric2score_for_model = sample["scores"].get(curr_model)
                 back_off_model_idx += 1
             score = metric2score_for_model[metric]

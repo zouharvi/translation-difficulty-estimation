@@ -65,7 +65,7 @@ def get_src_lang2nlp(lps: List[str]) -> Dict:
         if src_lang not in src_lang2nlp:
             # udpipe_load gives tokenization + UD parsing for Czech
             src_lang2nlp[src_lang] = (
-                spacy.load(f"{src_lang}_core_web_sm")
+                spacy.load("en_core_web_sm" if src_lang == "en" else "ja_core_news_sm")
                 if src_lang != "cs"
                 else udpipe_load("cs")
             )

@@ -52,8 +52,10 @@ def negative_word_frequency_score(
                     scorer_name2score[scorer_name] = src_lang2scores[src_lang][src_idx]
             else:
                 tokens = tokenize(sample["src"], src_lang)
-                score = -sum(scoring_funct(token, src_lang) for token in tokens) / len(
-                    tokens
+                score = (
+                    -sum(scoring_funct(tok, src_lang) for tok in tokens) / len(tokens)
+                    if len(tokens) > 0
+                    else 0.0
                 )
                 for scorer_name2score in sample["scores"].values():
                     scorer_name2score[scorer_name] = score
