@@ -20,9 +20,7 @@ subsampling.syntactic_complexity.src_len_score(data_all)
 subsampling.syntactic_complexity.syntactic_complexity_score(
     data_all, "syntactic_complexity"
 )
-subsampling.negative_word_frequency.avg_word_freq_score(
-    data_all, "negative_word_frequency"
-)
+subsampling.average_word_frequency.avg_word_freq_score(data_all, "avg_word_freq")
 subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_avg")
 subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_var")
 subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_diff")
