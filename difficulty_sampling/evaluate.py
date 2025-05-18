@@ -77,7 +77,7 @@ def main_eval(
 
     # result_clusters = subset2evaluate.evaluate.eval_subset_clusters(data_new, "human")
     result_avg_perfect = np.average([
-        line["scores"][sys]["human"] >= 95
+        line["scores"][sys]["human"] >= 100
         for line in src_data_budget
         for sys in line["scores"].keys()
     ])

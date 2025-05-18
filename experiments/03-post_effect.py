@@ -34,7 +34,6 @@ tgt2embd = list(
 )
 tgt2embd = dict(zip(tgt2embd, model.encode(tgt2embd)))
 
-# %%
 import language_tool_python
 
 grammarcheck = language_tool_python.LanguageTool("en-US")
@@ -49,8 +48,6 @@ src2error = list(
 )
 src2error = {src: len(grammarcheck.check(src)) / len(src.split()) for src in src2error}
 grammarcheck.close()
-
-# %%
 
 
 def symmetric_chrf(tgt1, tgt2):
@@ -94,12 +91,13 @@ for data_name, data in tqdm.tqdm(list(data_all.lp2src_data_list.items())):
         }
 
 # %%
+
 # apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
     subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-mqm-wmt1923"
+        "Prosho/sentinel-src-mqm-wmt1723"
     ),
-    scorer_name="sentinel-src-mqm-wmt1923",
+    scorer_name="sentinel-src-mqm-wmt1723",
     data=data_all,
     use_tgt_lang_token=True,
 )
@@ -112,19 +110,22 @@ subsampling.misc.apply_external_artificial_crowd_metrics(
     sys2translations_path=Path(
         "../data/external_artificial_crowd/sys2translations.pickle"
     ),
-    metric="MetricX-24-Hybrid-QE-XXL",
+    metric="XCOMET-QE-XXL",
 )
 subsampling.misc.apply_llm_as_a_judge(
     data_all,
     scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_source_based_num_scores.csv"
+        "../data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_target_based_num_scores.csv"
     ),
     llm_name="Command-A",
 )
 subsampling.misc.apply_oracle_with_fixed_scores(
-    data_all,
-    scorer_name="oracle-src",
+    data_all, scorer_name="oracle-src", use_tgt_lang=False
 )
+subsampling.misc.apply_oracle_with_fixed_scores(
+    data_all, scorer_name="oracle-tgt", use_tgt_lang=True
+)
+subsampling.misc.apply_subset2evaluate(data_all, method="random", seed=0)
 
 # %%
 
@@ -202,15 +203,16 @@ METHOD_TO_NAME = {
     "random": "Random",
     "LLM-as-a-Judge (Command-A)": "LLM-as-a-Judge",
     "syntactic_complexity": "Syntactic Complexity",
-    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Artificial Crowd",
-    "sentinel-src-mqm-wmt1923": "Sentinel",
-    "oracle-src": "Oracle",
+    "ext_artcrowd|XCOMET-QE-XXL": "Artificial Crowd",
+    "sentinel-src-mqm-wmt1723": "Sentinel",
+    "oracle-src": "Oracle-src",
+    "oracle-tgt": "Oracle-tgt",
 }
 
 fig, axss = plt.subplots(
     len(METHOD_TO_NAME),
     5,
-    figsize=(11, 2.5 * len(METHOD_TO_NAME)),
+    figsize=(11, 2.1 * len(METHOD_TO_NAME)),
     width_ratios=[1, 1, 1, 1, 1],
 )
 for axs_i, (axs, (method, method_name)) in enumerate(zip(axss, METHOD_TO_NAME.items())):
@@ -275,7 +277,7 @@ fout = open("../generated/03-post_effect_corr.tex", "w")
 
 
 print(
-    "\\begin{tabular}{l" + "r" * len(METHOD_CORR["Oracle"]) + "} \n \\toprule",
+    "\\begin{tabular}{l" + "r" * len(METHOD_CORR["Oracle-src"]) + "} \n \\toprule",
     file=fout,
 )
 METHODNAME_TO_SHORT = {
@@ -284,7 +286,8 @@ METHODNAME_TO_SHORT = {
     "Syntactic Complexity": "Syntax Complexity",
     "Artificial Crowd": "Artificial Crowd",
     "Sentinel": "Sentinel",
-    "Oracle": "Oracle",
+    "Oracle-src": "Oracle-src",
+    "Oracle-tgt": "Oracle-tgt",
 }
 print(
     r"""

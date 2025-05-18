@@ -23,9 +23,9 @@ data_all = difficulty_sampling.data.Data.load(
 # apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
     subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-mqm-wmt1923"
+        "Prosho/sentinel-src-mqm-wmt1723"
     ),
-    scorer_name="sentinel-src-mqm-wmt1923",
+    scorer_name="sentinel-src-mqm-wmt1723",
     data=data_all,
     use_tgt_lang_token=True,
 )
@@ -38,18 +38,20 @@ subsampling.misc.apply_external_artificial_crowd_metrics(
     sys2translations_path=Path(
         "../data/external_artificial_crowd/sys2translations.pickle"
     ),
-    metric="MetricX-24-Hybrid-QE-XXL",
+    metric="XCOMET-QE-XXL",
 )
 subsampling.misc.apply_llm_as_a_judge(
     data_all,
     scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_source_based_num_scores.csv"
+        "../data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_target_based_num_scores.csv"
     ),
     llm_name="Command-A",
 )
 subsampling.misc.apply_oracle_with_fixed_scores(
-    data_all,
-    scorer_name="oracle-src",
+    data_all, scorer_name="oracle-src", use_tgt_lang=False
+)
+subsampling.misc.apply_oracle_with_fixed_scores(
+    data_all, scorer_name="oracle-tgt", use_tgt_lang=True
 )
 
 # %%
@@ -98,9 +100,10 @@ METHOD_TO_NAME = {
     "random": "Random",
     "LLM-as-a-Judge (Command-A)": "LLM-as-a-Judge",
     "syntactic_complexity": "Syntax Complexity",
-    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Artificial Crowd",
-    "sentinel-src-mqm-wmt1923": "Sentinel",
-    "oracle-src": "Oracle",
+    "ext_artcrowd|XCOMET-QE-XXL": "Artificial Crowd",
+    "sentinel-src-mqm-wmt1723": "Sentinel",
+    "oracle-src": "Oracle-src",
+    "oracle-tgt": "Oracle-tgt",
 }
 
 
@@ -150,10 +153,11 @@ for i in range(10):
 METHOD_TO_COLOR = {
     "random": "black",
     "oracle-src": difficulty_sampling.utils.COLORS[0],
+    "oracle-tgt": "#600000",
     "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
     "LLM-as-a-Judge (Command-A)": difficulty_sampling.utils.COLORS[1],
-    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": difficulty_sampling.utils.COLORS[4],
-    "sentinel-src-mqm-wmt1923": difficulty_sampling.utils.COLORS[2],
+    "ext_artcrowd|XCOMET-QE-XXL": difficulty_sampling.utils.COLORS[4],
+    "sentinel-src-mqm-wmt1723": difficulty_sampling.utils.COLORS[2],
 }
 
 difficulty_sampling.utils.matplotlib_default()
@@ -241,7 +245,6 @@ plt.savefig("../generated/05-post_effect_src_diversity.pdf")
 plt.show()
 
 # %%
-# plot just the legend
 
 # fix the line for Random
 import copy
@@ -249,19 +252,19 @@ import copy
 handle_random = copy.deepcopy(handles[0])
 handle_random.set_color(METHOD_TO_COLOR["random"])
 
-
+# plot just the legend
 plt.figure(figsize=(7.5, 0.4))
 plt.legend(
     [handle_random] + handles,
     ["Random"] + handles_txt,
     loc="center",
     fontsize=9,
-    ncol=6,
+    ncol=7,
     frameon=False,
     handlelength=0.7,
     handletextpad=0.5,
+    columnspacing=0.9,
 )
 plt.axis("off")
-plt.tight_layout(pad=0)
-plt.savefig("../generated/05-post_effect_src_diversity_legend.pdf")
-plt.show()
+plt.savefig("../generated/04-variable_budget_legend.pdf")
+plt.tight_layout()
