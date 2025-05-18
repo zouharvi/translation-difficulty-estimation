@@ -53,9 +53,9 @@ def apply_subset2evaluate_cache(data, method):
                 line["scores"][sys][method] = -score
 
 
-def apply_subset2evaluate(data, method):
+def apply_subset2evaluate(data, method, **kwargs):
     for data in data.lp2src_data_list.values():
-        scores = subset2evaluate.methods.METHODS[method](data)
+        scores = subset2evaluate.methods.METHODS[method](data, **kwargs)
         for line in data:
             score = scores.pop(0)
             for sys in line["scores"].keys():

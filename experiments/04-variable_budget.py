@@ -19,9 +19,9 @@ data_all = difficulty_sampling.data.Data.load(
 # apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
     subsampling.sentinel.get_sentinel_src_metric_model(
-        "Prosho/sentinel-src-mqm-wmt1923"
+        "Prosho/sentinel-src-mqm-wmt1723"
     ),
-    scorer_name="sentinel-src-mqm-wmt1923",
+    scorer_name="sentinel-src-mqm-wmt1723",
     data=data_all,
     use_tgt_lang_token=True,
 )
@@ -34,18 +34,20 @@ subsampling.misc.apply_external_artificial_crowd_metrics(
     sys2translations_path=Path(
         "../data/external_artificial_crowd/sys2translations.pickle"
     ),
-    metric="MetricX-24-Hybrid-QE-XXL",
+    metric="XCOMET-QE-XXL",
 )
 subsampling.misc.apply_llm_as_a_judge(
     data_all,
     scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_source_based_num_scores.csv"
+        "../data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_target_based_num_scores.csv"
     ),
     llm_name="Command-A",
 )
 subsampling.misc.apply_oracle_with_fixed_scores(
-    data_all,
-    scorer_name="oracle-src",
+    data_all, scorer_name="oracle-src", use_tgt_lang=False
+)
+subsampling.misc.apply_oracle_with_fixed_scores(
+    data_all, scorer_name="oracle-tgt", use_tgt_lang=True
 )
 
 # %%
@@ -54,8 +56,8 @@ data_x = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
 # plot random spread
 data_y_rand_all = []
-for _ in range(10):
-    subsampling.misc.apply_subset2evaluate(data_all, method="random")
+for seed in range(10):
+    subsampling.misc.apply_subset2evaluate(data_all, method="random", seed=seed)
     data_y = []
     for p in data_x:
         out = difficulty_sampling.evaluate.main_eval_avg(
@@ -77,16 +79,18 @@ METHOD_TO_NAME = {
     "random": "Random",
     "LLM-as-a-Judge (Command-A)": "LLM-as-a-Judge",
     "syntactic_complexity": "Syntax Complexity",
-    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "Artificial Crowd",
-    "sentinel-src-mqm-wmt1923": "Sentinel",
-    "oracle-src": "Oracle",
+    "ext_artcrowd|XCOMET-QE-XXL": "Artificial Crowd",
+    "sentinel-src-mqm-wmt1723": "Sentinel",
+    "oracle-src": "Oracle-src",
+    "oracle-tgt": "Oracle-tgt",
 }
 METHOD_TO_COLOR = {
     "random": "black",
     "oracle-src": difficulty_sampling.utils.COLORS[0],
+    "oracle-tgt": "#600000",
     "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
-    "sentinel-src-mqm-wmt1923": difficulty_sampling.utils.COLORS[2],
-    "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": difficulty_sampling.utils.COLORS[4],
+    "sentinel-src-mqm-wmt1723": difficulty_sampling.utils.COLORS[2],
+    "ext_artcrowd|XCOMET-QE-XXL": difficulty_sampling.utils.COLORS[4],
     "LLM-as-a-Judge (Command-A)": difficulty_sampling.utils.COLORS[1],
 }
 
@@ -169,12 +173,13 @@ axs[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x*100)}%"
 handles, handles_txt = axs[0].get_legend_handles_labels()
 
 for method, coords0, coords1 in [
-    ("oracle-src", (0.17, 0.25), (0.2, 0.11)),
-    ("sentinel-src-mqm-wmt1923", (0.04, 0.45), (0.3, 0.2)),
-    ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", (0.04, 0.65), (0.04, 0.39)),
-    ("syntactic_complexity", None, (0.04, 0.55)),
-    ("LLM-as-a-Judge (Command-A)", None, (0.4, 0.74)),
-    ("random", None, (0.05, 0.85)),
+    ("oracle-src", (0.04, 0.35, 35), (0.15, 0.29, 20)),
+    ("oracle-tgt", (0.07, 0.05, 53), (0.15, 0.05, 20)),
+    ("sentinel-src-mqm-wmt1723", (0.04, 0.63, 10), (0.04, 0.10, 25)),
+    ("ext_artcrowd|XCOMET-QE-XXL", None, None),
+    ("syntactic_complexity", None, None),
+    ("LLM-as-a-Judge (Command-A)", None, None),
+    ("random", None, (0.05, 0.75, 0)),
 ]:
     if coords0 is not None:
         axs[0].text(
@@ -184,6 +189,7 @@ for method, coords0, coords1 in [
             fontsize=8,
             color=METHOD_TO_COLOR[method],
             transform=axs[0].transAxes,
+            rotation=coords0[2],
         )
     if coords1 is not None:
         axs[1].text(
@@ -193,6 +199,7 @@ for method, coords0, coords1 in [
             fontsize=8,
             color=METHOD_TO_COLOR[method],
             transform=axs[1].transAxes,
+            rotation=coords1[2],
         )
 
 
@@ -218,10 +225,11 @@ plt.legend(
     ["Random"] + handles_txt,
     loc="center",
     fontsize=9,
-    ncol=6,
+    ncol=7,
     frameon=False,
     handlelength=0.7,
     handletextpad=0.5,
+    columnspacing=0.9,
 )
 plt.axis("off")
 plt.savefig("../generated/04-variable_budget_legend.pdf")
