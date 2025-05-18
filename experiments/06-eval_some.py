@@ -7,16 +7,22 @@ import difficulty_sampling.utils
 import difficulty_sampling.data
 import subsampling.sentinel
 import subsampling.syntactic_complexity
-import subsampling.negative_word_frequency
+import subsampling.average_word_frequency
 import subsampling.misc
 
-data_all = difficulty_sampling.data.Data.load(dataset_name="wmt24", lps=["all"], domains="all", protocol="esa")
+data_all = difficulty_sampling.data.Data.load(
+    dataset_name="wmt24", lps=["all"], domains="all", protocol="esa"
+)
 
 # %%
 subsampling.misc.apply_subset2evaluate(data_all, method="random")
 subsampling.syntactic_complexity.src_len_score(data_all)
-subsampling.syntactic_complexity.syntactic_complexity_score(data_all, "syntactic_complexity")
-subsampling.negative_word_frequency.negative_word_frequency_score(data_all, "negative_word_frequency")
+subsampling.syntactic_complexity.syntactic_complexity_score(
+    data_all, "syntactic_complexity"
+)
+subsampling.negative_word_frequency.avg_word_freq_score(
+    data_all, "negative_word_frequency"
+)
 subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_avg")
 subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_var")
 subsampling.misc.apply_subset2evaluate_cache(data_all, method="precomet_diff")
@@ -49,7 +55,7 @@ for metric in ["human", "XCOMET-QE"]:
                 score = line["scores"]["Aya23"][metric]
             else:
                 score = line["scores"][model][metric]
-                
+
             for sys in line["scores"].keys():
                 line["scores"][sys]["artcrowd|" + model + "|" + metric] = score
 
@@ -106,30 +112,34 @@ METHOD_TO_NAME = {
 
 import random
 
+
 def format_cell_tau(v, minv=0, maxv=0.250):
     vcol = min(maxv, abs(v))
-    vcol = (vcol-minv) / (maxv-minv) * 80
+    vcol = (vcol - minv) / (maxv - minv) * 80
     return f"\\cellcolor{{SpringGreen3!{int(vcol)}}} {random.randint(1, 10)} \\hspace{{2mm}} {v:.3f}"
+
 
 def format_cell_pearson(v, minv=0, maxv=0.250):
     vcol = min(maxv, abs(v))
-    vcol = (vcol-minv) / (maxv-minv) * 80
+    vcol = (vcol - minv) / (maxv - minv) * 80
     return f"\\cellcolor{{CadetBlue3!{int(vcol)}}} {random.randint(1, 10)} \\hspace{{2mm}} {v:.3f}"
+
 
 fout = open(difficulty_sampling.ROOT / f"generated/06-eval_some.tex", "w")
 print(
-r"""
+    r"""
 \begin{tabular}{lrr}
 \toprule
 Method & \hspace{-3mm} Kendall's $\tau_b$ \hspace{-3mm} & Pearson \\
 \midrule
 """,
-    file=fout
+    file=fout,
 )
 
 for method, method_name in METHOD_TO_NAME.items():
     results = difficulty_sampling.evaluate.main_eval_avg(
-        method, data=data_all,
+        method,
+        data=data_all,
         budget=100,
     )
     diff_tau = results.diff_tau
@@ -146,10 +156,11 @@ for method, method_name in METHOD_TO_NAME.items():
         file=fout,
     )
 
-print(r"""
+print(
+    r"""
 \bottomrule
 \end{tabular}
 """,
-    file=fout
+    file=fout,
 )
 fout.close()

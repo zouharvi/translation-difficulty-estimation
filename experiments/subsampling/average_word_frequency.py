@@ -8,17 +8,17 @@ from difficulty_sampling.data import Data
 logger = logging.getLogger(__name__)
 
 
-def negative_word_frequency_score(
+def avg_word_freq_score(
     data: Data,
-    scorer_name: Literal["negative_word_frequency", "negative_word_zipf_frequency"],
+    scorer_name: Literal["avg_word_freq", "avg_word_zipf_freq"],
     score_all_source_texts: bool = False,
 ) -> Data:
     """
-    Assign to each source text a score that depends on the word frequency of its tokens.
+    Assign to each source text a score that depends on the word frequency of its tokens (average).
 
     Args:
         data: Data to score.
-        scorer_name: Name to use for scorer. Allowed values: 'negative_word_frequency', 'negative_word_zipf_frequency'.
+        scorer_name: Name to use for scorer. Allowed values: 'avg_word_freq', 'avg_word_zipf_freq'.
         score_all_source_texts: If True, score all source texts regardless of language pair. Default: False.
 
     Returns:
@@ -26,13 +26,9 @@ def negative_word_frequency_score(
     """
     from wordfreq import word_frequency, zipf_frequency, tokenize
 
-    if (
-        scorer_name != "negative_word_frequency"
-        and scorer_name != "negative_word_zipf_frequency"
-    ):
+    if scorer_name != "avg_word_freq" and scorer_name != "avg_word_zipf_freq":
         raise ValueError(
-            f"Scorer name '{scorer_name}' not recognized! Allowed values: 'negative_word_frequency', "
-            "'negative_word_zipf_frequency'."
+            f"Scorer name '{scorer_name}' not recognized! Allowed values: 'avg_word_freq', 'avg_word_zipf_freq'."
         )
 
     src_lang2scores = (
@@ -40,9 +36,7 @@ def negative_word_frequency_score(
         if not score_all_source_texts
         else None
     )
-    scoring_funct = (
-        word_frequency if scorer_name == "negative_word_frequency" else zipf_frequency
-    )
+    scoring_funct = word_frequency if scorer_name == "avg_word_freq" else zipf_frequency
 
     for lp, src_data_list in data.lp2src_data_list.items():
         src_lang = lp.split("-")[0]
@@ -53,7 +47,7 @@ def negative_word_frequency_score(
             else:
                 tokens = tokenize(sample["src"], src_lang)
                 score = (
-                    -sum(scoring_funct(tok, src_lang) for tok in tokens) / len(tokens)
+                    sum(scoring_funct(tok, src_lang) for tok in tokens) / len(tokens)
                     if len(tokens) > 0
                     else 0.0
                 )
@@ -75,7 +69,7 @@ def subsample_with_negative_word_frequency(args: Namespace) -> Data:
     Returns:
         scored_data (Data): Data with word frequency scores added.
     """
-    scored_data = negative_word_frequency_score(
+    scored_data = avg_word_freq_score(
         Data.load(
             dataset_name=args.dataset_name,
             lps=[args.lp],

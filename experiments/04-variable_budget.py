@@ -9,14 +9,18 @@ import difficulty_sampling.data
 import matplotlib.pyplot as plt
 import subsampling.sentinel
 import subsampling.syntactic_complexity
-import subsampling.negative_word_frequency
+import subsampling.average_word_frequency
 import subsampling.misc
 
-data_all = difficulty_sampling.data.Data.load(dataset_name="wmt24", lps=["all"], domains="all", protocol="esa")
+data_all = difficulty_sampling.data.Data.load(
+    dataset_name="wmt24", lps=["all"], domains="all", protocol="esa"
+)
 
 # apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model("Prosho/sentinel-src-mqm-wmt1923"),
+    subsampling.sentinel.get_sentinel_src_metric_model(
+        "Prosho/sentinel-src-mqm-wmt1923"
+    ),
     scorer_name="sentinel-src-mqm-wmt1923",
     data=data_all,
     use_tgt_lang_token=True,
@@ -30,7 +34,7 @@ subsampling.misc.apply_external_artificial_crowd_metrics(
     sys2translations_path=Path(
         "../data/external_artificial_crowd/sys2translations.pickle"
     ),
-    metric="MetricX-24-Hybrid-QE-XXL", 
+    metric="MetricX-24-Hybrid-QE-XXL",
 )
 subsampling.misc.apply_llm_as_a_judge(
     data_all,
@@ -148,7 +152,6 @@ axs[1].fill_between(
 )
 
 
-
 axs[0].set_ylabel("Average Score")
 axs[1].set_ylabel("%Perfect")
 
@@ -175,7 +178,8 @@ for method, coords0, coords1 in [
 ]:
     if coords0 is not None:
         axs[0].text(
-            coords0[0], coords0[1],
+            coords0[0],
+            coords0[1],
             METHOD_TO_NAME[method].replace("Artificial", "Art."),
             fontsize=8,
             color=METHOD_TO_COLOR[method],
@@ -183,7 +187,8 @@ for method, coords0, coords1 in [
         )
     if coords1 is not None:
         axs[1].text(
-            coords1[0], coords1[1],
+            coords1[0],
+            coords1[1],
             METHOD_TO_NAME[method].replace("Artificial", "Art."),
             fontsize=8,
             color=METHOD_TO_COLOR[method],
@@ -201,6 +206,7 @@ plt.show()
 
 # fix the line for Random
 import copy
+
 handle_random = copy.deepcopy(handles[0])
 handle_random.set_color(METHOD_TO_COLOR["random"])
 

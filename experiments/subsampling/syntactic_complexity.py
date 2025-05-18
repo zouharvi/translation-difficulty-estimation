@@ -101,7 +101,7 @@ def syntactic_complexity_score(
         else None
     )
 
-    logger.info("Computing Syntactic Complexity scores for each source text...")
+    logger.info("Computing Syntactic Complexity score for each source text...")
     for lp, src_data_list in data.lp2src_data_list.items():
         src_lang = lp.split("-")[0]
         for src_idx, sample in enumerate(src_data_list):
@@ -144,7 +144,7 @@ def src_len_score(
         else None
     )
 
-    logger.info("Computing Source Length scores for each source text...")
+    logger.info("Computing Source Length score for each source text...")
     for lp, src_data_list in data.lp2src_data_list.items():
         src_lang = lp.split("-")[0]
         for src_idx, sample in enumerate(src_data_list):

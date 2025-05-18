@@ -6,7 +6,7 @@ import numpy as np
 
 from difficulty_sampling.data import Data, get_src_score
 from subsampling.sentinel import subsample_with_sentinel_src
-from subsampling.negative_word_frequency import (
+from subsampling.average_word_frequency import (
     subsample_with_negative_word_frequency,
 )
 from subsampling.syntactic_complexity import subsample_with_syntactic_complexity

@@ -12,24 +12,30 @@ import difficulty_sampling.utils
 import difficulty_sampling.data
 import subsampling.sentinel
 import subsampling.syntactic_complexity
-import subsampling.negative_word_frequency
+import subsampling.average_word_frequency
 import subsampling.misc
 from difficulty_sampling import DiffCorrTasks
 
 SINGLE_SRC_SUBSET = False
 
-RUN_STAT_SIGN_ON_DIFFCORR, K = True, 0
+RUN_STAT_SIGN_ON_DIFFCORR, K = True, 1000
 corr_fcn_for_diff: Literal["kendall", "pearson"] = "kendall"
 
 protocol: Literal["esa", "mqm"] = "esa"
 data = difficulty_sampling.data.Data.load(
-    dataset_name="wmt24", lps=["all"], domains="all", protocol=protocol
+    dataset_name="wmt24",
+    lps=["all"],
+    domains="all",
+    protocol=protocol,
+    include_ref=True,
+    include_human=True,
 )
 domains = ["news", "social", "literary", "speech"]
 
 score_all_source_texts = True
 
 # apply scorers to the whole data
+
 subsampling.sentinel.sentinel_src_metric_model_score(
     subsampling.sentinel.get_sentinel_src_metric_model("sapienzanlp/sentinel-src-mqm"),
     scorer_name="sentinel-src-mqm",
@@ -44,13 +50,17 @@ subsampling.sentinel.sentinel_src_metric_model_score(
     data=data,
     score_all_source_texts=score_all_source_texts,
 )
+
 subsampling.misc.apply_oracle_with_fixed_scores(
     data, scorer_name="oracle_with_fixed_scores", use_tgt_lang=False
 )
 subsampling.misc.apply_oracle_with_fixed_scores(
     data, scorer_name="oracle_with_fixed_scores_tgt", use_tgt_lang=True
 )
-subsampling.misc.apply_subset2evaluate(data, method="random")
+
+subsampling.misc.apply_random(data, scorer_name="random", seed=42)
+# subsampling.misc.apply_subset2evaluate(data, method="random")
+
 # subsampling.misc.apply_src_len(data)
 subsampling.syntactic_complexity.syntactic_complexity_score(
     data,
@@ -62,18 +72,20 @@ subsampling.syntactic_complexity.src_len_score(
     "src_len",
     score_all_source_texts=score_all_source_texts,
 )
-subsampling.negative_word_frequency.negative_word_frequency_score(
+subsampling.average_word_frequency.avg_word_freq_score(
     data,
-    "negative_word_frequency",
+    "avg_word_freq",
     score_all_source_texts=score_all_source_texts,
 )
+
 subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_diff")
 subsampling.misc.apply_subset2evaluate_cache(data, method="precomet_diversity")
+
 subsampling.misc.apply_internal_artificial_crowd_metrics(
-    data, model="GPT-4", metric="MetricX-24-Hybrid-QE"
+    data, model="all", metric="MetricX-24-Hybrid-QE"  # GPT-4
 )
 subsampling.misc.apply_internal_artificial_crowd_metrics(
-    data, model="GPT-4", metric="XCOMET-QE"
+    data, model="all", metric="XCOMET-QE"  # GPT-4
 )
 subsampling.misc.apply_external_artificial_crowd_metrics(
     data,
@@ -91,19 +103,34 @@ subsampling.misc.apply_external_artificial_crowd_metrics(
     metric="XCOMET-QE-XXL",
     protocol=protocol,
 )
+
 subsampling.misc.apply_llm_as_a_judge(
     data,
     scored_source_texts_df_path=Path(
         f"../data/LLM-as-a-Judge/{protocol}/command-a/command-a-03-2025_source_based_num_scores.csv"
     ),
-    llm_name="Command A",
+    llm_name="Command A, src-based",
 )
 subsampling.misc.apply_llm_as_a_judge(
     data,
     scored_source_texts_df_path=Path(
         f"../data/LLM-as-a-Judge/{protocol}/gpt-4o/gpt-4o-1120_source_based_num_scores.csv"
     ),
-    llm_name="GPT-4o",
+    llm_name="GPT-4o, src-based",
+)
+subsampling.misc.apply_llm_as_a_judge(
+    data,
+    scored_source_texts_df_path=Path(
+        f"../data/LLM-as-a-Judge/{protocol}/command-a/command-a-03-2025_target_based_num_scores.csv"
+    ),
+    llm_name="Command A, tgt-based",
+)
+subsampling.misc.apply_llm_as_a_judge(
+    data,
+    scored_source_texts_df_path=Path(
+        f"../data/LLM-as-a-Judge/{protocol}/gpt-4o/gpt-4o-1120_target_based_num_scores.csv"
+    ),
+    llm_name="GPT-4o, tgt-based",
 )
 
 METHOD_TO_NAME = {
@@ -113,19 +140,22 @@ METHOD_TO_NAME = {
     "oracle_with_fixed_scores_tgt": "Oracle with Fixed Scores (Tgt)",
     "src_len": "Source Length",
     "syntactic_complexity": "Syntactic Complexity",
-    "negative_word_frequency": "Negative Word Frequency",
+    "avg_word_freq": "Word Rarity",
     "precomet_diff": "PreCOMET Difficulty",
     "precomet_diversity": "PreCOMET Diversity",
     "sentinel-src-mqm": "Sentinel-MQM",
     "sentinel-src-mqm-wmt1723": "Sentinel-MQM-WMT1723",
-    "artcrowd|GPT-4|MetricX-24-Hybrid-QE": "Internal Artificial Crowd (MetricX-24-Hybrid-QE-XXL)",
-    "artcrowd|GPT-4|XCOMET-QE": "Internal Artificial Crowd (XCOMET-QE-XXL)",
+    "artcrowd|all|MetricX-24-Hybrid-QE": "Internal Artificial Crowd (MetricX-24-Hybrid-QE-XXL)",  # GPT-4
+    "artcrowd|all|XCOMET-QE": "Internal Artificial Crowd (XCOMET-QE-XXL)",  # GPT-4
     "ext_artcrowd|MetricX-24-Hybrid-QE-XXL": "External Artificial Crowd (MetricX-24-Hybrid-QE-XXL)",
     "ext_artcrowd|XCOMET-QE-XXL": "External Artificial Crowd (XCOMET-QE-XXL)",
-    "LLM-as-a-Judge (Command A)": "LLM-as-a-Judge (Command A)",
-    "LLM-as-a-Judge (GPT-4o)": "LLM-as-a-Judge (GPT-4o)",
+    "LLM-as-a-Judge (Command A, src-based)": "LLM-as-a-Judge (Command A, src-based)",
+    "LLM-as-a-Judge (GPT-4o, src-based)": "LLM-as-a-Judge (GPT-4o, src-based)",
+    "LLM-as-a-Judge (Command A, tgt-based)": "LLM-as-a-Judge (Command A, tgt-based)",
+    "LLM-as-a-Judge (GPT-4o, tgt-based)": "LLM-as-a-Judge (GPT-4o, tgt-based)",
 }
 
+"""
 with open(
     difficulty_sampling.ROOT
     / f"generated/{'01-gen_mt_like_eval' if SINGLE_SRC_SUBSET else '01-eval_all'}_{protocol}.tex",
@@ -165,14 +195,15 @@ with open(
         ("precomet_diversity", False),
         ("sentinel-src-mqm", False),
         ("sentinel-src-mqm-wmt1723", False),
-        ("artcrowd|GPT-4|MetricX-24-Hybrid-QE", True),
-        ("artcrowd|GPT-4|XCOMET-QE", True),
+        ("artcrowd|all|MetricX-24-Hybrid-QE", True),  # GPT-4
+        ("artcrowd|all|XCOMET-QE", True),  # GPT-4
         ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", True),
         ("ext_artcrowd|XCOMET-QE-XXL", True),
         ("LLM-as-a-Judge (Command A)", False),
         ("LLM-as-a-Judge (GPT-4o)", False),
     ]:
         eval_print_table(method_name, is_method_tgt_lang_dep)
+"""
 
 """
 with open(
@@ -258,9 +289,7 @@ if RUN_STAT_SIGN_ON_DIFFCORR:
         list(data.lp2src_data_list), k=K, corr_fcn=corr_fcn_for_diff
     )
 
-    new_results = diff_corr_tasks.Run(
-        data, [method for method in METHOD_TO_NAME if method != "human"], METHOD_TO_NAME
-    )
+    new_results = diff_corr_tasks.Run(data, list(METHOD_TO_NAME), METHOD_TO_NAME)
     if K > 0:
         avg_corrs, matrix = new_results.AverageCorrMatrix(wts)
     else:
@@ -278,6 +307,21 @@ if RUN_STAT_SIGN_ON_DIFFCORR:
             attr_list=["lang", "corr_fcn"],
             nicknames={corr_fcn_for_diff: f"DiffCorr ({corr_fcn_for_diff})"},
             fmt="text",
+        )
+        f.write(table)
+
+    with open(
+        difficulty_sampling.ROOT
+        / f"generated/diff_corr_table_{corr_fcn_for_diff}_{protocol}.tsv",
+        "w",
+    ) as f:
+        table = new_results.Table(
+            metrics=list(avg_corrs),
+            initial_column=avg_corrs,
+            initial_column_header="avg-corr",
+            attr_list=["lang", "corr_fcn"],
+            nicknames={corr_fcn_for_diff: f"DiffCorr ({corr_fcn_for_diff})"},
+            fmt="tsv",
         )
         f.write(table)
 

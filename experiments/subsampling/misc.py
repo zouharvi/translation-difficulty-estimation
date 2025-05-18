@@ -2,6 +2,7 @@ import logging
 import pickle
 from collections import defaultdict
 from pathlib import Path
+import random
 from typing import Literal
 
 import numpy as np
@@ -61,6 +62,23 @@ def apply_subset2evaluate(data, method):
                 line["scores"][sys][method] = -score
 
 
+def apply_random(data: Data, scorer_name: str = "random", seed: int = 42) -> None:
+    """
+    Assign a random score to each MT output.
+
+    Args:
+        data: Data to add the random scores to.
+        scorer_name: Name of the random score to be added. Default: "random".
+        seed: Random seed. Default: 42.
+    """
+    random.seed(seed)
+
+    for src_data_list in data.lp2src_data_list.values():
+        for sample in src_data_list:
+            for metric2score in sample["scores"].values():
+                metric2score[scorer_name] = random.random()
+
+
 def apply_oracle_with_fixed_scores(
     data: Data,
     scorer_name: str = "oracle_with_fixed_scores",
@@ -96,31 +114,43 @@ def apply_oracle_with_fixed_scores(
 
 
 def apply_internal_artificial_crowd_metrics(
-    data: Data, model: str, metric: str
+    data: Data,
+    model: str,
+    metric: str,
 ) -> None:
     """
     Add Internal Artificial Crowd scores to the input data.
 
     Args:
         data: Data to add the Internal Artificial Crowd scores to.
-        model: Name of the MT model used for Internal Artificial Crowd scores.
+        model: Name of the MT model used for Internal Artificial Crowd scores. If "all", all MT models will be used.
         metric: Name of the metric used for Internal Artificial Crowd scores.
     """
     for lp, src_data_list in data.lp2src_data_list.items():
         for sample in src_data_list:
-            curr_model = model
-            metric2score_for_model, back_off_model_idx = (
-                sample["scores"].get(curr_model),
-                0,
-            )
-            while metric2score_for_model is None:
-                assert lp == "en-cs"
-                curr_model = wmt24_encs_mt_sys_ranking[back_off_model_idx]
-                metric2score_for_model = sample["scores"].get(curr_model)
-                back_off_model_idx += 1
-            score = metric2score_for_model[metric]
-            for metric2score in sample["scores"].values():
-                metric2score["artcrowd|" + model + "|" + metric] = score
+            if model == "all":
+                for metric2score in sample["scores"].values():
+                    metric2score["artcrowd|" + model + "|" + metric] = metric2score[
+                        metric
+                    ]
+
+            else:
+                curr_model = model
+                metric2score_for_model, back_off_model_idx = (
+                    sample["scores"].get(curr_model),
+                    0,
+                )
+
+                while metric2score_for_model is None:
+                    assert lp == "en-cs"
+                    curr_model = wmt24_encs_mt_sys_ranking[back_off_model_idx]
+                    metric2score_for_model = sample["scores"].get(curr_model)
+                    back_off_model_idx += 1
+
+                score = metric2score_for_model[metric]
+
+                for metric2score in sample["scores"].values():
+                    metric2score["artcrowd|" + model + "|" + metric] = score
 
 
 def apply_external_artificial_crowd_metrics(

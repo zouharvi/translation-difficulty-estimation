@@ -6,7 +6,7 @@ import difficulty_sampling.utils
 import difficulty_sampling.data
 import subsampling.sentinel
 import subsampling.syntactic_complexity
-import subsampling.negative_word_frequency
+import subsampling.average_word_frequency
 import subsampling.misc
 import sentence_transformers
 import collections
@@ -14,13 +14,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 
-data_all = difficulty_sampling.data.Data.load(dataset_name="wmt24", lps=["all"], domains="all", protocol="esa")
+data_all = difficulty_sampling.data.Data.load(
+    dataset_name="wmt24", lps=["all"], domains="all", protocol="esa"
+)
 
 # %%
 
 # apply scorers to the whole data
 subsampling.sentinel.sentinel_src_metric_model_score(
-    subsampling.sentinel.get_sentinel_src_metric_model("Prosho/sentinel-src-mqm-wmt1923"),
+    subsampling.sentinel.get_sentinel_src_metric_model(
+        "Prosho/sentinel-src-mqm-wmt1923"
+    ),
     scorer_name="sentinel-src-mqm-wmt1923",
     data=data_all,
     use_tgt_lang_token=True,
@@ -34,7 +38,7 @@ subsampling.misc.apply_external_artificial_crowd_metrics(
     sys2translations_path=Path(
         "../data/external_artificial_crowd/sys2translations.pickle"
     ),
-    metric="MetricX-24-Hybrid-QE-XXL", 
+    metric="MetricX-24-Hybrid-QE-XXL",
 )
 subsampling.misc.apply_llm_as_a_judge(
     data_all,
@@ -51,35 +55,43 @@ subsampling.misc.apply_oracle_with_fixed_scores(
 # %%
 # embedd all sources
 # map tgt to embedding
-src2embd = list({
-    line["src"]
-    for data in data_all.lp2src_data_list.values()
-    for line in data
-})
-src2embd = dict(zip(src2embd, sentence_transformers.SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2").encode(src2embd)))
+src2embd = list(
+    {line["src"] for data in data_all.lp2src_data_list.values() for line in data}
+)
+src2embd = dict(
+    zip(
+        src2embd,
+        sentence_transformers.SentenceTransformer(
+            "paraphrase-multilingual-MiniLM-L12-v2"
+        ).encode(src2embd),
+    )
+)
 
 # %%
 
 data_x = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+
+
 def measure_avg_sim(method_name, p: float):
     mean_dists = []
     for data in data_all.lp2src_data_list.values():
         # take top-B from data based on data_y
         B = int(len(data) * p)
-        data_y = [np.average([x["scores"][sys][method_name] for sys in x["scores"].keys()]) for x in data]
-        data_local = [x[0] for x in sorted(list(zip(data, data_y)), key=lambda x: x[1])[:B]]
+        data_y = [
+            np.average([x["scores"][sys][method_name] for sys in x["scores"].keys()])
+            for x in data
+        ]
+        data_local = [
+            x[0] for x in sorted(list(zip(data, data_y)), key=lambda x: x[1])[:B]
+        ]
 
         # measure average point distance based on embedding
-        data_embd = [
-            src2embd[line["src"]]
-            for line in data_local
-        ]
+        data_embd = [src2embd[line["src"]] for line in data_local]
         data_embd = np.array(data_embd)
         # measure distance
         mean_dist = sentence_transformers.util.cos_sim(data_embd, data_embd).mean()
         mean_dists.append(mean_dist)
     return np.average(mean_dists)
-
 
 
 METHOD_TO_NAME = {
@@ -91,19 +103,22 @@ METHOD_TO_NAME = {
     "oracle-src": "Oracle",
 }
 
+
 def measure_closest_sim(method_name, p: float):
     closest_dists = []
     for data in data_all.lp2src_data_list.values():
         # take top-B from data based on data_y
         B = int(len(data) * p)
-        data_y = [np.average([x["scores"][sys][method_name] for sys in x["scores"].keys()]) for x in data]
-        data_local = [x[0] for x in sorted(list(zip(data, data_y)), key=lambda x: x[1])[:B]]
+        data_y = [
+            np.average([x["scores"][sys][method_name] for sys in x["scores"].keys()])
+            for x in data
+        ]
+        data_local = [
+            x[0] for x in sorted(list(zip(data, data_y)), key=lambda x: x[1])[:B]
+        ]
 
         # measure average point distance based on embedding
-        data_embd = [
-            src2embd[line["src"]]
-            for line in data_local
-        ]
+        data_embd = [src2embd[line["src"]] for line in data_local]
         data_embd = np.array(data_embd)
         # measure distance
         dists = sentence_transformers.util.cos_sim(data_embd, data_embd)
@@ -112,6 +127,7 @@ def measure_closest_sim(method_name, p: float):
         dists = np.max(dists.numpy(), axis=1)
         closest_dists.append(dists.mean())
     return np.average(closest_dists)
+
 
 results_avg = collections.defaultdict(list)
 results_avg_random = collections.defaultdict(list)
@@ -207,8 +223,8 @@ axs[1].set_xticks(data_x[::2])
 axs[1].set_xticklabels([f"{int(p*100)}%" for p in data_x[::2]])
 
 # set formatter to three decimal places
-axs[0].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.3f}'))
-axs[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.3f}'))
+axs[0].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.3f}"))
+axs[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.3f}"))
 
 axs[0].set_ylabel("Closest Neighbour\nCosine Similarity")
 axs[1].set_ylabel("Average Pairwise\nCosine Similarity")
@@ -229,6 +245,7 @@ plt.show()
 
 # fix the line for Random
 import copy
+
 handle_random = copy.deepcopy(handles[0])
 handle_random.set_color(METHOD_TO_COLOR["random"])
 
