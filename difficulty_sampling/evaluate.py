@@ -76,14 +76,20 @@ def main_eval(
     )
 
     # result_clusters = subset2evaluate.evaluate.eval_subset_clusters(data_new, "human")
-    result_avg_perfect = np.average([
-        line["scores"][sys]["human"] >= 95
-        for line in src_data_budget
-        for sys in line["scores"].keys()
-    ])
+    result_avg_perfect = np.average(
+        [
+            line["scores"][sys]["human"] == (100 if protocol == "esa" else 0)
+            for line in src_data_budget
+            for sys in line["scores"].keys()
+        ]
+    )
 
     result_diff_tau = []
-    for sys in src_data_list[0]["scores"]:
+
+    # en-cs doesn't have the same set of MT systems for each src seg.
+    all_sys = set([sys for sample in src_data_list for sys in sample["scores"]])
+
+    for sys in all_sys:
         result_diff_tau.append(
             scipy.stats.kendalltau(
                 [
@@ -102,7 +108,7 @@ def main_eval(
     result_diff_tau = np.average(result_diff_tau)
 
     result_diff_pearson = []
-    for sys in src_data_list[0]["scores"]:
+    for sys in all_sys:
         result_diff_pearson.append(
             scipy.stats.pearsonr(
                 [
@@ -252,12 +258,25 @@ def main_eval_avg(
                     else int(len(src_data_list) * proportion),
                     protocol,
                 )
+                if len(src_data_list) > 0
+                else MainResult(
+                    avg_score=None,
+                    avg_perfect=None,
+                    diff_tau=None,
+                    diff_pearson=None,
+                )
             )
 
+    avg_scores, avg_perfects, diff_taus, diff_pearsons = (
+        [x.avg_score for x in results if x.avg_score is not None],
+        [x.avg_perfect for x in results if x.avg_perfect is not None],
+        [x.diff_tau for x in results if x.diff_tau is not None],
+        [x.diff_pearson for x in results if x.diff_pearson is not None],
+    )
     # Average results per language pair.
     return MainResult(
-        avg_score=np.average([x.avg_score for x in results]),
-        avg_perfect=np.average([x.avg_perfect for x in results]),
-        diff_tau=np.average([x.diff_tau for x in results]),
-        diff_pearson=np.average([x.diff_pearson for x in results]),
+        avg_score=np.average(avg_scores) if len(avg_scores) > 0 else None,
+        avg_perfect=np.average(avg_perfects) if len(avg_perfects) > 0 else None,
+        diff_tau=np.average(diff_taus) if len(diff_taus) > 0 else None,
+        diff_pearson=np.average(diff_pearsons) if len(diff_pearsons) > 0 else None,
     )

@@ -18,7 +18,7 @@ from difficulty_sampling import DiffCorrTasks
 
 SINGLE_SRC_SUBSET = False
 
-RUN_STAT_SIGN_ON_DIFFCORR, K = True, 1000
+RUN_STAT_SIGN_ON_DIFFCORR, K = False, 1000
 corr_fcn_for_diff: Literal["kendall", "pearson"] = "kendall"
 
 protocol: Literal["esa", "mqm"] = "esa"
@@ -27,8 +27,8 @@ data = difficulty_sampling.data.Data.load(
     lps=["all"],
     domains="all",
     protocol=protocol,
-    include_ref=True,
-    include_human=True,
+    # include_ref=True,
+    # include_human=True,
 )
 domains = ["news", "social", "literary", "speech"]
 
@@ -155,42 +155,41 @@ METHOD_TO_NAME = {
     "LLM-as-a-Judge (GPT-4o, tgt-based)": "LLM-as-a-Judge (GPT-4o, tgt-based)",
 }
 
-"""
 with open(
     difficulty_sampling.ROOT
     / f"generated/{'01-gen_mt_like_eval' if SINGLE_SRC_SUBSET else '01-eval_all'}_{protocol}.tex",
     "w",
 ) as f:
 
-    def eval_print_table(method_name, is_method_tgt_lang_dep, budget=100):
+    def eval_print_table(method_name, is_method_tgt_lang_dep, proportion=0.25):
         results = difficulty_sampling.evaluate.main_eval_avg(
             method_name,
             data=data,
             single_src_subset=SINGLE_SRC_SUBSET,
             is_method_tgt_lang_dep=is_method_tgt_lang_dep,
             protocol=protocol,
-            budget=budget,
+            proportion=proportion,
         )
         method_name = METHOD_TO_NAME.get(method_name, method_name.replace("_", " "))
         print(
             f"{method_name:>20}{'*' if is_method_tgt_lang_dep else ''}",
             f"{results.avg_score:.1f}",
-            f"{results.diff_tau:.3f}",
-            f"{results.diff_pearson:.3f}",
-            f"{(results.avg_easy * 100):.1f}%".replace("%", "\\%"),
+            # f"{results.diff_tau:.3f}",
+            # f"{results.diff_pearson:.3f}",
+            f"{(results.avg_perfect * 100):.1f}%".replace("%", "\\%"),
             sep=" & ",
             end=" \\\\\n",
             file=f,
         )
 
     for method_name, is_method_tgt_lang_dep in [
-        ("random", False),
+        ("random", True),
         ("human", True),
         ("oracle_with_fixed_scores", False),
         ("oracle_with_fixed_scores_tgt", True),
         ("src_len", False),
         ("syntactic_complexity", False),
-        ("negative_word_frequency", False),
+        ("avg_word_freq", False),
         ("precomet_diff", False),
         ("precomet_diversity", False),
         ("sentinel-src-mqm", False),
@@ -199,20 +198,20 @@ with open(
         ("artcrowd|all|XCOMET-QE", True),  # GPT-4
         ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", True),
         ("ext_artcrowd|XCOMET-QE-XXL", True),
-        ("LLM-as-a-Judge (Command A)", False),
-        ("LLM-as-a-Judge (GPT-4o)", False),
+        ("LLM-as-a-Judge (Command A, src-based)", False),
+        ("LLM-as-a-Judge (GPT-4o, src-based)", False),
+        ("LLM-as-a-Judge (Command A, tgt-based)", True),
+        ("LLM-as-a-Judge (GPT-4o, tgt-based)", True),
     ]:
         eval_print_table(method_name, is_method_tgt_lang_dep)
-"""
 
-"""
 with open(
     difficulty_sampling.ROOT
     / f"generated/{'01-gen_mt_like_eval_domains' if SINGLE_SRC_SUBSET else '01-eval_all_domains'}_{protocol}.tex",
     "w",
 ) as f:
 
-    def eval_print_table(method_name, is_method_tgt_lang_dep, proportion=0.5):
+    def eval_print_table(method_name, is_method_tgt_lang_dep, proportion=0.25):
         # 1) collect each domain’s results
         domain_results = []
         for domain in domains:
@@ -235,9 +234,9 @@ with open(
         scores.append(macro_score)
 
         # 2b) DiffCorr for each domain + macro‐avg
-        corrs = [results.diff_corr for results in domain_results]
-        macro_corr = sum(corrs) / len(corrs)
-        corrs.append(macro_corr)
+        # corrs = [results.diff_corr for results in domain_results]
+        # macro_corr = sum(corrs) / len(corrs)
+        # corrs.append(macro_corr)
 
         # 2c) %Perfect for each domain + macro‐avg
         perfs = [100 * results.avg_perfect for results in domain_results]
@@ -250,8 +249,8 @@ with open(
         for val in scores:
             formatted.append(f"{val:.1f}")
         # next 5 are DiffCorr → three decimals
-        for val in corrs:
-            formatted.append(f"{val:.3f}")
+        # for val in corrs:
+        # formatted.append(f"{val:.3f}")
         # last 5 are %Perfect → one decimal + “\%”
         for val in perfs:
             formatted.append(f"{val:.1f}\\%")
@@ -263,26 +262,27 @@ with open(
         f.write(f"{display_name}{star} & {row} \\\\\n")
 
     for method_name, is_method_tgt_lang_dep in [
-        ("random", False),
+        ("random", True),
         ("human", True),
         ("oracle_with_fixed_scores", False),
         ("oracle_with_fixed_scores_tgt", True),
         ("src_len", False),
         ("syntactic_complexity", False),
-        ("negative_word_frequency", False),
+        ("avg_word_freq", False),
         ("precomet_diff", False),
         ("precomet_diversity", False),
         ("sentinel-src-mqm", False),
         ("sentinel-src-mqm-wmt1723", False),
-        ("artcrowd|GPT-4|MetricX-24-Hybrid-QE", True),
-        ("artcrowd|GPT-4|XCOMET-QE", True),
+        ("artcrowd|all|MetricX-24-Hybrid-QE", True),  # GPT-4
+        ("artcrowd|all|XCOMET-QE", True),  # GPT-4
         ("ext_artcrowd|MetricX-24-Hybrid-QE-XXL", True),
         ("ext_artcrowd|XCOMET-QE-XXL", True),
-        ("LLM-as-a-Judge (Command A)", False),
-        ("LLM-as-a-Judge (GPT-4o)", False),
+        ("LLM-as-a-Judge (Command A, src-based)", False),
+        ("LLM-as-a-Judge (GPT-4o, src-based)", False),
+        ("LLM-as-a-Judge (Command A, tgt-based)", True),
+        ("LLM-as-a-Judge (GPT-4o, tgt-based)", True),
     ]:
         eval_print_table(method_name, is_method_tgt_lang_dep)
-"""
 
 if RUN_STAT_SIGN_ON_DIFFCORR:
     diff_corr_tasks, wts = DiffCorrTasks.diff_correlations_on_wmt24(
