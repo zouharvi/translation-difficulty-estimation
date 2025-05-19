@@ -259,5 +259,5 @@ plt.legend(
     columnspacing=0.9,
 )
 plt.axis("off")
-plt.savefig("../generated/04-variable_budget_legend_wmt25.pdf")
+plt.savefig("../generated/05-post_effect_src_diversity_wmt25_length.pdf")
 plt.tight_layout()

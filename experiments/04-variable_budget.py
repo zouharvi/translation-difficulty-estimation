@@ -49,6 +49,11 @@ subsampling.misc.apply_oracle_with_fixed_scores(
 subsampling.misc.apply_oracle_with_fixed_scores(
     data_all, scorer_name="oracle-tgt", use_tgt_lang=True
 )
+subsampling.syntactic_complexity.src_len_score(
+    data_all,
+    "src_len",
+)
+
 
 # %%
 
@@ -78,7 +83,8 @@ difficulty_sampling.utils.matplotlib_default()
 METHOD_TO_NAME = {
     "random": "Random",
     "LLM-as-a-Judge (Command-A)": "LLM-as-a-Judge",
-    "syntactic_complexity": "Syntax Complexity",
+    # "syntactic_complexity": "Syntax Complexity",
+    "src_len": "Length",
     "ext_artcrowd|XCOMET-QE-XXL": "Artificial Crowd",
     "sentinel-src-mqm-wmt1723": "Sentinel",
     "oracle-src": "Oracle-src",
@@ -88,7 +94,8 @@ METHOD_TO_COLOR = {
     "random": "black",
     "oracle-src": difficulty_sampling.utils.COLORS[0],
     "oracle-tgt": "#600000",
-    "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
+    # "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
+    "src_len": difficulty_sampling.utils.COLORS[3],
     "sentinel-src-mqm-wmt1723": difficulty_sampling.utils.COLORS[2],
     "ext_artcrowd|XCOMET-QE-XXL": difficulty_sampling.utils.COLORS[4],
     "LLM-as-a-Judge (Command-A)": difficulty_sampling.utils.COLORS[1],
@@ -173,11 +180,11 @@ axs[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x*100)}%"
 handles, handles_txt = axs[0].get_legend_handles_labels()
 
 for method, coords0, coords1 in [
-    ("oracle-src", (0.04, 0.35, 35), (0.15, 0.29, 20)),
+    ("oracle-src", (0.04, 0.35, 35), (0.12, 0.27, 20)),
     ("oracle-tgt", (0.07, 0.05, 53), (0.15, 0.05, 20)),
     ("sentinel-src-mqm-wmt1723", (0.04, 0.63, 10), (0.04, 0.10, 25)),
     ("ext_artcrowd|XCOMET-QE-XXL", None, None),
-    ("syntactic_complexity", None, None),
+    ("src_len", None, None),
     ("LLM-as-a-Judge (Command-A)", None, None),
     ("random", None, (0.05, 0.75, 0)),
 ]:

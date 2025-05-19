@@ -23,6 +23,9 @@ model = sentence_transformers.SentenceTransformer(
     "paraphrase-multilingual-MiniLM-L12-v2"
 )
 
+
+subsampling.syntactic_complexity.src_len_score(data_all, "src_len")
+
 # map tgt to embedding
 tgt2embd = list(
     {
@@ -87,7 +90,7 @@ for data_name, data in tqdm.tqdm(list(data_all.lp2src_data_list.items())):
             "grammaticality": src2error[line["src"]]
             if data_name.split("-")[0] == "en"
             else None,
-            "length": len(line["src"]),
+            "length": -list(line["scores"].values())[0]["src_len"],
         }
 
 # %%
@@ -201,7 +204,8 @@ def plot_problem(ax, data_x, data_y, key_x, key_y):
 METHOD_TO_NAME = {
     "random": "Random",
     "LLM-as-a-Judge (Command-A)": "LLM-as-a-Judge",
-    "syntactic_complexity": "Syntactic Complexity",
+    # "syntactic_complexity": "Syntactic Complexity",
+    "src_len": "Length",
     "ext_artcrowd|XCOMET-QE-XXL": "Artificial Crowd",
     "sentinel-src-mqm-wmt1723": "Sentinel",
     "oracle-src": "Oracle-src",
@@ -287,6 +291,7 @@ METHODNAME_TO_SHORT = {
     "Sentinel": "Sentinel",
     "Oracle-src": "Oracle-src",
     "Oracle-tgt": "Oracle-tgt",
+    "Length": "Length",
 }
 print(
     r"""
