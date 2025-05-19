@@ -290,8 +290,8 @@ METHODNAME_TO_SHORT = {
 }
 print(
     r"""
-    & \multicolumn{2}{c}{Source} & \multicolumn{2}{c}{Diversity} & Unique \\
-    & length & errors & embd & chrF & outputs \\
+    & \multicolumn{2}{c}{\bf Source} & \multicolumn{2}{c}{\bf Diversity} & \bf Unique \\
+    & \bf length & \bf errors & \bf embd & \bf chrF\hspace{0.5mm} & \bf outputs \\
     \midrule
     """,
     file=fout,
@@ -301,7 +301,7 @@ print(
 def format_cell(v, minv=0, maxv=1.1):
     va = abs(v)
     color = int(100 * (va - minv) / (maxv - minv))
-    return f"\\cellcolor{{red!{color}}} {v:.2f}"
+    return f"\\cellcolor{{red!{color}}} ${v:.2f}$"
 
 
 METHOD_CORR["Random"] = {
