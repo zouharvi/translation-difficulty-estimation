@@ -99,7 +99,7 @@ subsampling.sentinel.sentinel_src_metric_model_score(
     ),
     scorer_name="sentinel-src-mqm-wmt1723",
     data=data_all,
-    use_tgt_lang_token=True,
+    use_tgt_lang_token=False,
 )
 subsampling.syntactic_complexity.syntactic_complexity_score(
     data_all, "syntactic_complexity"

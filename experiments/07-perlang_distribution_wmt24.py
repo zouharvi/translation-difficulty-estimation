@@ -82,6 +82,8 @@ def plot_eightpack(data_all: difficulty_sampling.data.Data, suffix: str = ""):
         ax.set_yticks([])
         if lp in {"en-uk", "en-zh"}:
             ax.set_xlabel("ESA Score")
+            ax.set_xticks([7, 52.5, 97])
+            ax.set_xticklabels([0, 50, 100])
         ax.spines[["top", "right"]].set_visible(False)
 
     handles = axs[0].get_legend_handles_labels()
@@ -120,7 +122,7 @@ subsampling.sentinel.sentinel_src_metric_model_score(
     ),
     scorer_name="sentinel-src-mqm-wmt1723",
     data=data_all,
-    use_tgt_lang_token=True,
+    use_tgt_lang_token=False,
 )
 subsampling.syntactic_complexity.syntactic_complexity_score(
     data_all, "syntactic_complexity"
