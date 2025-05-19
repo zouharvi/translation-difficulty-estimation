@@ -101,7 +101,6 @@ subsampling.sentinel.sentinel_src_metric_model_score(
     data=data_all,
     use_tgt_lang_token=True,
 )
-subsampling.misc.apply_subset2evaluate(data_all, method="random")
 subsampling.syntactic_complexity.syntactic_complexity_score(
     data_all, "syntactic_complexity"
 )
