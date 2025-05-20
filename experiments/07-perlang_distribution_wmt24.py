@@ -65,7 +65,7 @@ def plot_eightpack(data_all: difficulty_sampling.data.Data, suffix: str = ""):
             [data_flat1, data_flat2, data_flat3],
             bins=range(0, 100+15, 15),
             density=True,
-            label=["All", "Top system", "Top translation"],
+            label=["All", "Top model", "Top translation"],
         )
         # r"En$\rightarrow$" + 
         ax.text(
