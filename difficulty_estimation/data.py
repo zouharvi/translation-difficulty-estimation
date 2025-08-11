@@ -6,8 +6,8 @@ from mt_metrics_eval.data import EvalSet
 import numpy as np
 from typing import Dict, List, Union, TypedDict, Optional
 
-from difficulty_sampling import WMT24_GENMT_DATA
-from difficulty_sampling.utils import load_data_wmt
+from difficulty_estimation import WMT24_GENMT_DATA
+from difficulty_estimation.utils import load_data_wmt
 
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class Data:
             include_ref: Whether to include the reference translations in the data. Default: False.
             include_human: Whether to include human systems in the data. Default: False.
         """
-        from difficulty_sampling import (
+        from difficulty_estimation import (
             wmt24_from_en_lps_esa,
             wmt24_from_en_lps_mqm,
             wmt24_lps_esa,

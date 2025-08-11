@@ -5,7 +5,7 @@ from typing import Literal, List, Tuple, Dict
 import numpy as np
 from matplotlib import pyplot as plt
 
-from difficulty_sampling.data import Data, SrcData
+from difficulty_estimation.data import Data, SrcData
 import analysis.translation_difficulty_across_tgt_langs
 
 

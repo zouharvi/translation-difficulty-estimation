@@ -9,8 +9,8 @@ from collections import Counter, defaultdict
 
 from typing import Dict, List, Union, TypedDict, Optional, Literal
 
-from difficulty_sampling import wmt24_from_en_lps_mqm
-from difficulty_sampling.utils import tgt2lp
+from difficulty_estimation import wmt24_from_en_lps_mqm
+from difficulty_estimation.utils import tgt2lp
 lp2tgt = {v: k for k, v in tgt2lp.items()}
 
 from mt_metrics_eval import data

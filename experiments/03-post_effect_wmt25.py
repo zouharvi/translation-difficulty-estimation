@@ -4,12 +4,12 @@ import json
 import sentence_transformers
 import numpy as np
 import tqdm
-import difficulty_sampling.data
+import difficulty_estimation.data
 import subsampling.misc
 import subsampling.syntactic_complexity
 import subsampling.average_word_frequency
 import matplotlib.pyplot as plt
-import difficulty_sampling.utils
+import difficulty_estimation.utils
 import scipy.stats
 import subsampling.sentinel
 from pathlib import Path
@@ -23,7 +23,7 @@ with open("../data/wmt25.jsonl", "r") as f:
         for x in f.readlines()
     ]
 
-data_all = difficulty_sampling.data.Data(
+data_all = difficulty_estimation.data.Data(
     lp2src_data_list={"en": data_raw},
     lps=["en"],
     dataset_name="wmt25",

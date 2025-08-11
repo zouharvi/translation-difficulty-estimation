@@ -3,7 +3,7 @@ requires = ["setuptools >= 65.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["difficulty_sampling"]
+packages = ["difficulty_estimation"]
 
 [project]
 name = "difficulty-sampling"

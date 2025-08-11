@@ -4,13 +4,13 @@ import collections
 from typing import Dict
 
 import numpy as np
-import difficulty_sampling
-import difficulty_sampling.evaluate
-import difficulty_sampling.utils
-import difficulty_sampling.data
-from difficulty_sampling.utils import difficulty2color
+import difficulty_estimation
+import difficulty_estimation.evaluate
+import difficulty_estimation.utils
+import difficulty_estimation.data
+from difficulty_estimation.utils import difficulty2color
 
-data_all = difficulty_sampling.utils.load_data_wmt_all(min_items=100, normalize=False)
+data_all = difficulty_estimation.utils.load_data_wmt_all(min_items=100, normalize=False)
 data_year = collections.defaultdict(dict)
 
 for (year, lp), data in data_all.items():

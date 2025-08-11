@@ -4,18 +4,18 @@ import sentence_transformers
 import itertools
 import numpy as np
 import tqdm
-import difficulty_sampling.data
+import difficulty_estimation.data
 import subsampling.misc
 import subsampling.syntactic_complexity
 import subsampling.average_word_frequency
 import matplotlib.pyplot as plt
-import difficulty_sampling.utils
+import difficulty_estimation.utils
 import scipy.stats
 import subsampling.sentinel
 from pathlib import Path
 from fastchrf import pairwise_chrf
 
-data_all = difficulty_sampling.data.Data.load(
+data_all = difficulty_estimation.data.Data.load(
     dataset_name="wmt24", lps=["all"], domains="all", protocol="esa"
 )
 

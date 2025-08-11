@@ -9,7 +9,7 @@ from mt_metrics_eval.tasks import TaskResults, CORRELATION_FUNCTIONS, TaskSetRes
 from mt_metrics_eval.data import CompareMetrics
 from mt_metrics_eval import stats
 
-from difficulty_sampling.data import Data, SrcData
+from difficulty_estimation.data import Data, SrcData
 
 
 wmt24_domains = {"news", "social", "literary", "speech"}

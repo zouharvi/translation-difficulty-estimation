@@ -1,20 +1,20 @@
 """
-TODO: resolve the structure, things are a bit messy with subsampling not being in difficulty_sampling package
+TODO: resolve the structure, things are a bit messy with subsampling not being in difficulty_estimation package
 """
 # %%
 
 from pathlib import Path
 from typing import Literal
 
-import difficulty_sampling
-import difficulty_sampling.evaluate
-import difficulty_sampling.utils
-import difficulty_sampling.data
+import difficulty_estimation
+import difficulty_estimation.evaluate
+import difficulty_estimation.utils
+import difficulty_estimation.data
 import subsampling.sentinel
 import subsampling.syntactic_complexity
 import subsampling.average_word_frequency
 import subsampling.misc
-from difficulty_sampling import DiffCorrTasks
+from difficulty_estimation import DiffCorrTasks
 
 SINGLE_SRC_SUBSET = False
 
@@ -22,7 +22,7 @@ RUN_STAT_SIGN_ON_DIFFCORR, K = False, 1000
 corr_fcn_for_diff: Literal["kendall", "pearson"] = "kendall"
 
 protocol: Literal["esa", "mqm"] = "esa"
-data = difficulty_sampling.data.Data.load(
+data = difficulty_estimation.data.Data.load(
     dataset_name="wmt24",
     lps=["all"],
     domains="all",
@@ -156,13 +156,13 @@ METHOD_TO_NAME = {
 }
 
 with open(
-    difficulty_sampling.ROOT
+    difficulty_estimation.ROOT
     / f"generated/{'01-gen_mt_like_eval' if SINGLE_SRC_SUBSET else '01-eval_all'}_{protocol}.tex",
     "w",
 ) as f:
 
     def eval_print_table(method_name, is_method_tgt_lang_dep, proportion=0.25):
-        results = difficulty_sampling.evaluate.main_eval_avg(
+        results = difficulty_estimation.evaluate.main_eval_avg(
             method_name,
             data=data,
             single_src_subset=SINGLE_SRC_SUBSET,
@@ -206,7 +206,7 @@ with open(
         eval_print_table(method_name, is_method_tgt_lang_dep)
 
 with open(
-    difficulty_sampling.ROOT
+    difficulty_estimation.ROOT
     / f"generated/{'01-gen_mt_like_eval_domains' if SINGLE_SRC_SUBSET else '01-eval_all_domains'}_{protocol}.tex",
     "w",
 ) as f:
@@ -216,7 +216,7 @@ with open(
         domain_results = []
         for domain in domains:
             domain_results.append(
-                difficulty_sampling.evaluate.main_eval_avg(
+                difficulty_estimation.evaluate.main_eval_avg(
                     method_name,
                     data=data,
                     single_src_subset=SINGLE_SRC_SUBSET,
@@ -296,7 +296,7 @@ if RUN_STAT_SIGN_ON_DIFFCORR:
         avg_corrs = new_results.AverageCorrs(wts)
 
     with open(
-        difficulty_sampling.ROOT
+        difficulty_estimation.ROOT
         / f"generated/diff_corr_table_{corr_fcn_for_diff}_{protocol}.txt",
         "w",
     ) as f:
@@ -311,7 +311,7 @@ if RUN_STAT_SIGN_ON_DIFFCORR:
         f.write(table)
 
     with open(
-        difficulty_sampling.ROOT
+        difficulty_estimation.ROOT
         / f"generated/diff_corr_table_{corr_fcn_for_diff}_{protocol}.tsv",
         "w",
     ) as f:
@@ -326,7 +326,7 @@ if RUN_STAT_SIGN_ON_DIFFCORR:
         f.write(table)
 
     with open(
-        difficulty_sampling.ROOT
+        difficulty_estimation.ROOT
         / f"generated/diff_corr_table_{corr_fcn_for_diff}_{protocol}.tex",
         "w",
     ) as f:

@@ -1,16 +1,16 @@
 # %%
 
 import numpy as np
-import difficulty_sampling
-import difficulty_sampling.evaluate
-import difficulty_sampling.utils
-import difficulty_sampling.data
+import difficulty_estimation
+import difficulty_estimation.evaluate
+import difficulty_estimation.utils
+import difficulty_estimation.data
 import matplotlib.pyplot as plt
-from difficulty_sampling.utils import tgt2lp
+from difficulty_estimation.utils import tgt2lp
 lp2tgt = {v: k for k, v in tgt2lp.items()}
 
 LPS = ["en-cs", "en-es", "en-hi", "en-is", "en-ja", "en-ru", "en-uk", "en-zh"]
-data_all = difficulty_sampling.data.Data.load(
+data_all = difficulty_estimation.data.Data.load(
     dataset_name="wmt24", lps=LPS, domains="all", protocol="esa"
 )
 
@@ -50,9 +50,9 @@ def get_top_system(data_local):
         if sys in line["scores"]
     ]
 
-difficulty_sampling.utils.matplotlib_default()
+difficulty_estimation.utils.matplotlib_default()
 
-def plot_eightpack(data_all: difficulty_sampling.data.Data, suffix: str = ""):
+def plot_eightpack(data_all: difficulty_estimation.data.Data, suffix: str = ""):
     _, axs= plt.subplots(4, 2, figsize=(3.9, 3.6), sharex=True, sharey=True)
     axs = list(axs.flatten())
     for lp, ax in zip(LPS, axs):
@@ -88,7 +88,7 @@ def plot_eightpack(data_all: difficulty_sampling.data.Data, suffix: str = ""):
 
     handles = axs[0].get_legend_handles_labels()
     plt.tight_layout(pad=0.2)
-    plt.savefig(difficulty_sampling.ROOT / f"generated/07-perlang_wmt24{suffix}.pdf")
+    plt.savefig(difficulty_estimation.ROOT / f"generated/07-perlang_wmt24{suffix}.pdf")
     plt.show()
 
     # only legend
@@ -104,7 +104,7 @@ def plot_eightpack(data_all: difficulty_sampling.data.Data, suffix: str = ""):
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout(pad=0)
-    plt.savefig(difficulty_sampling.ROOT / "generated/07-perlang_wmt24_legend.pdf")
+    plt.savefig(difficulty_estimation.ROOT / "generated/07-perlang_wmt24_legend.pdf")
     plt.show()
 
 
@@ -151,7 +151,7 @@ subsampling.misc.apply_oracle_with_fixed_scores(
 # %%
 import copy
 
-def compute_eightpack(data_all: difficulty_sampling.data.Data, key: str, suffix: str = ""):
+def compute_eightpack(data_all: difficulty_estimation.data.Data, key: str, suffix: str = ""):
     PROP = 0.25
     data_all = copy.deepcopy(data_all)
     for lp in data_all.lp2src_data_list.keys():

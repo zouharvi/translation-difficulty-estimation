@@ -4,7 +4,7 @@ from typing import Literal, List, Tuple
 
 import numpy as np
 
-from difficulty_sampling.data import Data, get_src_score
+from difficulty_estimation.data import Data, get_src_score
 import analysis.translation_difficulty_across_tgt_langs
 import subsampling.sentinel
 

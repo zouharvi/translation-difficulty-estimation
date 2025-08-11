@@ -6,7 +6,7 @@ import spacy
 from spacy.tokens import Token, Doc
 from spacy_udpipe import load as udpipe_load
 
-from difficulty_sampling.data import Data
+from difficulty_estimation.data import Data
 
 
 logger = logging.getLogger(__name__)

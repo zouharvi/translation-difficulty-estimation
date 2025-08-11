@@ -2,17 +2,17 @@
 
 from pathlib import Path
 import numpy as np
-import difficulty_sampling
-import difficulty_sampling.evaluate
-import difficulty_sampling.utils
-import difficulty_sampling.data
+import difficulty_estimation
+import difficulty_estimation.evaluate
+import difficulty_estimation.utils
+import difficulty_estimation.data
 import matplotlib.pyplot as plt
 import subsampling.sentinel
 import subsampling.syntactic_complexity
 import subsampling.average_word_frequency
 import subsampling.misc
 
-data_all = difficulty_sampling.data.Data.load(
+data_all = difficulty_estimation.data.Data.load(
     dataset_name="wmt24", lps=["all"], domains="all", protocol="esa"
 )
 
@@ -65,7 +65,7 @@ for seed in range(10):
     subsampling.misc.apply_subset2evaluate(data_all, method="random", seed=seed)
     data_y = []
     for p in data_x:
-        out = difficulty_sampling.evaluate.main_eval_avg(
+        out = difficulty_estimation.evaluate.main_eval_avg(
             "random",
             data=data_all,
             proportion=p,
@@ -78,7 +78,7 @@ data_y_rand_all = np.array(data_y_rand_all)
 # %%
 
 
-difficulty_sampling.utils.matplotlib_default()
+difficulty_estimation.utils.matplotlib_default()
 
 METHOD_TO_NAME = {
     "random": "Random",
@@ -92,13 +92,13 @@ METHOD_TO_NAME = {
 }
 METHOD_TO_COLOR = {
     "random": "black",
-    "oracle-src": difficulty_sampling.utils.COLORS[0],
+    "oracle-src": difficulty_estimation.utils.COLORS[0],
     "oracle-tgt": "#600000",
-    # "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
-    "src_len": difficulty_sampling.utils.COLORS[3],
-    "sentinel-src-mqm-wmt1723": difficulty_sampling.utils.COLORS[2],
-    "ext_artcrowd|XCOMET-QE-XXL": difficulty_sampling.utils.COLORS[4],
-    "LLM-as-a-Judge (Command-A)": difficulty_sampling.utils.COLORS[1],
+    # "syntactic_complexity": difficulty_estimation.utils.COLORS[3],
+    "src_len": difficulty_estimation.utils.COLORS[3],
+    "sentinel-src-mqm-wmt1723": difficulty_estimation.utils.COLORS[2],
+    "ext_artcrowd|XCOMET-QE-XXL": difficulty_estimation.utils.COLORS[4],
+    "LLM-as-a-Judge (Command-A)": difficulty_estimation.utils.COLORS[1],
 }
 
 fig, axs = plt.subplots(ncols=2, figsize=(7.5, 2.5), sharex=True)
@@ -109,7 +109,7 @@ for method, method_name in METHOD_TO_NAME.items():
     data_y = []
     for p in data_x:
         data_y.append(
-            difficulty_sampling.evaluate.main_eval_avg(
+            difficulty_estimation.evaluate.main_eval_avg(
                 method,
                 data=data_all,
                 proportion=p,
@@ -135,11 +135,11 @@ for method, method_name in METHOD_TO_NAME.items():
 data_y_rand_score = data_y_rand_all[:, :, 0].T
 data_y_rand_perfe = data_y_rand_all[:, :, 1].T
 data_y_rand_score_interval = [
-    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    difficulty_estimation.utils.confidence_interval(l, confidence=0.99)
     for l in data_y_rand_score
 ]
 data_y_rand_perfe_interval = [
-    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    difficulty_estimation.utils.confidence_interval(l, confidence=0.99)
     for l in data_y_rand_perfe
 ]
 

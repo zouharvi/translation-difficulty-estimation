@@ -1,11 +1,11 @@
 # %%
 
-import difficulty_sampling
+import difficulty_estimation
 import copy
 import numpy as np
 
 # load 572 items
-data = difficulty_sampling.utils.load_data_wmt_all()[("wmt24", "en-cs")]
+data = difficulty_estimation.utils.load_data_wmt_all()[("wmt24", "en-cs")]
 len(data)
 
 # %%
@@ -16,7 +16,7 @@ def my_difficulty_sampler_1(line):
 data_new = copy.deepcopy(data)
 data_new.sort(key=my_difficulty_sampler_1)
 
-clus, cors = difficulty_sampling.evaluate.eval_clu_cor(data_new, data)
+clus, cors = difficulty_estimation.evaluate.eval_clu_cor(data_new, data)
 # print average clusters and average correlation
 print(f"CLU: {np.mean(clus):.2f}, {np.mean(cors):.1%}")
 
@@ -29,7 +29,7 @@ def my_difficulty_sampler_2(line):
 data_new = copy.deepcopy(data)
 data_new.sort(key=my_difficulty_sampler_2)
 
-clus, cors = difficulty_sampling.evaluate.eval_clu_cor(data_new, data)
+clus, cors = difficulty_estimation.evaluate.eval_clu_cor(data_new, data)
 # print average clusters and average correlation
 print(f"CLU: {np.mean(clus):.2f}, {np.mean(cors):.1%}")
 
@@ -46,6 +46,6 @@ def my_difficulty_sampler_3(line):
 data_new = copy.deepcopy(data)
 data_new.sort(key=my_difficulty_sampler_3)
 
-clus, cors = difficulty_sampling.evaluate.eval_clu_cor(data_new, data)
+clus, cors = difficulty_estimation.evaluate.eval_clu_cor(data_new, data)
 # print average clusters and average correlation
 print(f"CLU: {np.mean(clus):.2f}, {np.mean(cors):.1%}")

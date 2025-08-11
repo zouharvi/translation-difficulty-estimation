@@ -1,9 +1,9 @@
 # %%
 import sentence_transformers.util
-import difficulty_sampling
-import difficulty_sampling.evaluate
-import difficulty_sampling.utils
-import difficulty_sampling.data
+import difficulty_estimation
+import difficulty_estimation.evaluate
+import difficulty_estimation.utils
+import difficulty_estimation.data
 import subsampling.sentinel
 import subsampling.syntactic_complexity
 import subsampling.average_word_frequency
@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 
-data_all = difficulty_sampling.data.Data.load(
+data_all = difficulty_estimation.data.Data.load(
     dataset_name="wmt24", lps=["all"], domains="all", protocol="esa"
 )
 
@@ -154,22 +154,22 @@ for i in range(10):
 
 METHOD_TO_COLOR = {
     "random": "black",
-    "oracle-src": difficulty_sampling.utils.COLORS[0],
+    "oracle-src": difficulty_estimation.utils.COLORS[0],
     "oracle-tgt": "#600000",
-    # "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
-    "src_len": difficulty_sampling.utils.COLORS[3],
-    "LLM-as-a-Judge (Command-A)": difficulty_sampling.utils.COLORS[1],
-    "ext_artcrowd|XCOMET-QE-XXL": difficulty_sampling.utils.COLORS[4],
-    "sentinel-src-mqm-wmt1723": difficulty_sampling.utils.COLORS[2],
+    # "syntactic_complexity": difficulty_estimation.utils.COLORS[3],
+    "src_len": difficulty_estimation.utils.COLORS[3],
+    "LLM-as-a-Judge (Command-A)": difficulty_estimation.utils.COLORS[1],
+    "ext_artcrowd|XCOMET-QE-XXL": difficulty_estimation.utils.COLORS[4],
+    "sentinel-src-mqm-wmt1723": difficulty_estimation.utils.COLORS[2],
 }
 
-difficulty_sampling.utils.matplotlib_default()
+difficulty_estimation.utils.matplotlib_default()
 
 fig, axs = plt.subplots(1, 2, figsize=(7.5, 2.5))
 
 # plot closest
 data_y_rand_closets_interval = [
-    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    difficulty_estimation.utils.confidence_interval(l, confidence=0.99)
     for l in np.array(list(results_closest_random.values())).T
 ]
 axs[0].fill_between(
@@ -196,7 +196,7 @@ for method in METHOD_TO_COLOR.keys():
 
 # plot avg
 data_y_rand_avg_interval = [
-    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    difficulty_estimation.utils.confidence_interval(l, confidence=0.99)
     for l in np.array(list(results_avg_random.values())).T
 ]
 axs[1].fill_between(

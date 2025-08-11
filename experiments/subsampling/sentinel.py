@@ -5,7 +5,7 @@ from typing import Dict, List
 
 import sentinel_metric
 
-from difficulty_sampling.data import Data
+from difficulty_estimation.data import Data
 
 
 logger = logging.getLogger(__name__)

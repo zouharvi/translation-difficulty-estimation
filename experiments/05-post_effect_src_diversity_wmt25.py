@@ -1,10 +1,10 @@
 # %%
 import json
 import sentence_transformers.util
-import difficulty_sampling
-import difficulty_sampling.evaluate
-import difficulty_sampling.utils
-import difficulty_sampling.data
+import difficulty_estimation
+import difficulty_estimation.evaluate
+import difficulty_estimation.utils
+import difficulty_estimation.data
 import subsampling.sentinel
 import subsampling.syntactic_complexity
 import subsampling.average_word_frequency
@@ -24,7 +24,7 @@ with open("../data/wmt25.jsonl", "r") as f:
         for x in f.readlines()
     ]
 
-data_all = difficulty_sampling.data.Data(
+data_all = difficulty_estimation.data.Data(
     lp2src_data_list={"en": data_raw},
     lps=["en"],
     dataset_name="wmt25",
@@ -149,17 +149,17 @@ for i in range(10):
 METHOD_TO_COLOR = {
     "random": "black",
     "src_len": "#a0a010",
-    "syntactic_complexity": difficulty_sampling.utils.COLORS[3],
-    "sentinel-src-mqm-wmt1723": difficulty_sampling.utils.COLORS[2],
+    "syntactic_complexity": difficulty_estimation.utils.COLORS[3],
+    "sentinel-src-mqm-wmt1723": difficulty_estimation.utils.COLORS[2],
 }
 
-difficulty_sampling.utils.matplotlib_default()
+difficulty_estimation.utils.matplotlib_default()
 
 fig, axs = plt.subplots(1, 2, figsize=(7.5, 2.5))
 
 # plot closest
 data_y_rand_closets_interval = [
-    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    difficulty_estimation.utils.confidence_interval(l, confidence=0.99)
     for l in np.array(list(results_closest_random.values())).T
 ]
 axs[0].fill_between(
@@ -186,7 +186,7 @@ for method in METHOD_TO_COLOR.keys():
 
 # plot avg
 data_y_rand_avg_interval = [
-    difficulty_sampling.utils.confidence_interval(l, confidence=0.99)
+    difficulty_estimation.utils.confidence_interval(l, confidence=0.99)
     for l in np.array(list(results_avg_random.values())).T
 ]
 axs[1].fill_between(

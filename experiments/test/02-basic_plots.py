@@ -1,8 +1,8 @@
 # %%
 
-import difficulty_sampling.utils
+import difficulty_estimation.utils
 
-data = difficulty_sampling.utils.load_data_wmt(year="wmt24", langs="en-es", normalize=False)
+data = difficulty_estimation.utils.load_data_wmt(year="wmt24", langs="en-es", normalize=False)
 
 # %%
 

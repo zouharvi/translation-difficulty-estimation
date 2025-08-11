@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import List, Union
 import logging
 import argparse
@@ -12,7 +11,7 @@ from scipy.stats import linregress
 import precomet
 import sentinel_metric
 
-from difficulty_sampling.data import Data
+from difficulty_estimation.data import Data
 
 
 logging.basicConfig(level=logging.INFO)

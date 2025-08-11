@@ -1,17 +1,17 @@
 """
-TODO: resolve the structure, things are a bit messy with subsampling not being in difficulty_sampling package
+TODO: resolve the structure, things are a bit messy with subsampling not being in difficulty_estimation package
 """
 
 # %%
 
 import numpy as np
-import difficulty_sampling
-import difficulty_sampling.evaluate
-import difficulty_sampling.utils
-import difficulty_sampling.data
+import difficulty_estimation
+import difficulty_estimation.evaluate
+import difficulty_estimation.utils
+import difficulty_estimation.data
 import subsampling.misc
 
-data = difficulty_sampling.data.Data.load(
+data = difficulty_estimation.data.Data.load(
     dataset_name="wmt24", lps=["en-x"], domains="all", protocol="esa", include_ref=True
 )
 
@@ -84,7 +84,7 @@ for model in models:
         subsampling.misc.apply_internal_artificial_crowd_metrics(
             data, model=model, metric=metric
         )
-        results[(model, metric)] = difficulty_sampling.evaluate.main_eval_avg(
+        results[(model, metric)] = difficulty_estimation.evaluate.main_eval_avg(
             f"artcrowd|{model}|{metric}", data=data, budget=100
         )._asdict()
 
@@ -97,7 +97,7 @@ for metametric in ["avg_score", "diff_corr", "avg_perfect"]:
         "avg_perfect": "{:.1%}",
     }[metametric]
     with open(
-        difficulty_sampling.ROOT
+        difficulty_estimation.ROOT
         / f"generated/02-artificial_crowd_single-{metametric}.tex",
         "w",
     ) as f:

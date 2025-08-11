@@ -2,8 +2,8 @@ import argparse
 import os
 from typing import List, Dict
 
-import difficulty_sampling
-from difficulty_sampling.data import Data
+import difficulty_estimation
+from difficulty_estimation.data import Data
 
 from translation import nllb_models, gemma_models, command_a_models, qwen_models
 from translation.models import gemma3, command_a, nllb, qwen

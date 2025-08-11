@@ -9,7 +9,7 @@ import subset2evaluate.evaluate
 import collections
 import numpy as np
 
-from difficulty_sampling.data import Data, SrcData, get_src_score
+from difficulty_estimation.data import Data, SrcData, get_src_score
 
 
 logger = logging.getLogger(__name__)

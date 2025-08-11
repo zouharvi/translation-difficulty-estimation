@@ -10,8 +10,8 @@ from matplotlib import pyplot as plt
 from mt_metrics_eval.data import EvalSet
 from scipy.stats import kendalltau, spearmanr, pearsonr
 
-from difficulty_sampling import ROOT
-from difficulty_sampling.data import Data
+from difficulty_estimation import ROOT
+from difficulty_estimation.data import Data
 
 logging.basicConfig(level=logging.INFO)
 

@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import subset2evaluate
 
-from difficulty_sampling.data import Data
+from difficulty_estimation.data import Data
 
 
 logger = logging.getLogger(__name__)

@@ -1,16 +1,16 @@
 # %%
 
 from pathlib import Path
-import difficulty_sampling
-import difficulty_sampling.evaluate
-import difficulty_sampling.utils
-import difficulty_sampling.data
+import difficulty_estimation
+import difficulty_estimation.evaluate
+import difficulty_estimation.utils
+import difficulty_estimation.data
 import subsampling.sentinel
 import subsampling.syntactic_complexity
 import subsampling.average_word_frequency
 import subsampling.misc
 
-data_all = difficulty_sampling.data.Data.load(
+data_all = difficulty_estimation.data.Data.load(
     dataset_name="wmt24", lps=["all"], domains="all", protocol="esa"
 )
 
@@ -123,7 +123,7 @@ def format_cell_pearson(v, minv=0, maxv=0.250):
     return f"\\cellcolor{{CadetBlue3!{int(vcol)}}} {random.randint(1, 10)} \\hspace{{2mm}} {v:.3f}"
 
 
-fout = open(difficulty_sampling.ROOT / f"generated/06-eval_some.tex", "w")
+fout = open(difficulty_estimation.ROOT / f"generated/06-eval_some.tex", "w")
 print(
     r"""
 \begin{tabular}{lrr}
@@ -135,7 +135,7 @@ Method & \hspace{-3mm} Kendall's $\tau_b$ \hspace{-3mm} & Pearson \\
 )
 
 for method, method_name in METHOD_TO_NAME.items():
-    results = difficulty_sampling.evaluate.main_eval_avg(
+    results = difficulty_estimation.evaluate.main_eval_avg(
         method,
         data=data_all,
         budget=100,
