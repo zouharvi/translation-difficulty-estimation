@@ -1,9 +1,9 @@
 # Estimating Machine Translation Difficulty 
-[![Paper](https://img.shields.io/badge/📜%20paper-481.svg)](TODO)
+[![Paper](https://img.shields.io/badge/📜%20paper-481.svg)](https://arxiv.org/abs/2508.10175)
 &nbsp;
 [![Models](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Collection-FCD21D)](https://huggingface.co/collections/Prosho/translation-difficulty-estimators-6816665c008e1d22426eb6c4)
 
-This repository contains the code for the paper [_Estimating Machine Translation Difficulty_](TODO) by Lorenzo Proietti<sup>\*</sup>, Stefano Perrella<sup>\*</sup>, Vilém Zouhar<sup>\*</sup>, Roberto Navigli, Tom Kocmi.
+This repository contains the code for the paper [_Estimating Machine Translation Difficulty_](https://arxiv.org/abs/2508.10175) by Lorenzo Proietti<sup>\*</sup>, Stefano Perrella<sup>\*</sup>, Vilém Zouhar<sup>\*</sup>, Roberto Navigli, Tom Kocmi.
 
 > **Abstract:**
 > Machine translation quality has began achieving near-perfect translations in some setups.
@@ -53,10 +53,13 @@ Further documentation WIP.
 
 If you use this work, please cite:
 ```bibtex
-@misc{proietti2025estimating,
-    author={Lorenzo Proietti, Stefano Perrella, Vilém Zouhar, Roberto Navigli, Tom Kocmi},
-    title={Estimating Machine Translation Difficulty},
-    year={2025},
-    url={TODO}
+@misc{proietti2025estimatingmachinetranslationdifficulty,
+      title={Estimating Machine Translation Difficulty}, 
+      author={Lorenzo Proietti and Stefano Perrella and Vilém Zouhar and Roberto Navigli and Tom Kocmi},
+      year={2025},
+      eprint={2508.10175},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2508.10175}, 
 }
 ```
