@@ -46,7 +46,18 @@ data[("wmt24", "en-cs")][0].keys()
 > dict_keys(['i', 'src', 'ref', 'tgt', 'cost', 'domain', 'doc', 'scores'])
 ```
 
-Run scripts in `experiments/` for main results, for example`python3 experiments/01-eval_all.py`.
+### Main results
+
+Run scripts in `experiments/` for main results, for example `python3 experiments/01-eval_all.py`.
+
+### General WMT24
+
+To generate the following figure, run `python3 experiments/07-perlang_distribution_wmt24.py`.
+
+<img src="misc/07-perlang_wmt24.svg" width="400em">
+
+### Other experiments
+
 Further documentation WIP.
 
 ## Misc.

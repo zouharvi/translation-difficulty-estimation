@@ -130,14 +130,14 @@ subsampling.syntactic_complexity.syntactic_complexity_score(
 subsampling.misc.apply_external_artificial_crowd_metrics(
     data_all,
     sys2translations_path=Path(
-        "../data/external_artificial_crowd/sys2translations.pickle"
+        "data/external_artificial_crowd/sys2translations.pickle"
     ),
     metric="XCOMET-QE-XXL",
 )
 subsampling.misc.apply_llm_as_a_judge(
     data_all,
     scored_source_texts_df_path=Path(
-        "../data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_target_based_num_scores.csv"
+        "data/LLM-as-a-Judge/esa/command-a/command-a-03-2025_target_based_num_scores.csv"
     ),
     llm_name="Command-A",
 )

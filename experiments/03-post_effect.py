@@ -14,6 +14,7 @@ import scipy.stats
 import subsampling.sentinel
 from pathlib import Path
 from fastchrf import pairwise_chrf
+import language_tool_python
 
 data_all = difficulty_estimation.data.Data.load(
     dataset_name="wmt24", lps=["all"], domains="all", protocol="esa"
@@ -37,7 +38,7 @@ tgt2embd = list(
 )
 tgt2embd = dict(zip(tgt2embd, model.encode(tgt2embd)))
 
-import language_tool_python
+
 
 grammarcheck = language_tool_python.LanguageTool("en-US")
 src2error = list(

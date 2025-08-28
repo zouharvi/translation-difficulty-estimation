@@ -6,12 +6,12 @@ build-backend = "setuptools.build_meta"
 packages = ["difficulty_estimation"]
 
 [project]
-name = "difficulty-sampling"
+name = "difficulty-estimation"
 version = "0.0.0"
 requires-python = ">=3.11"
 authors = []
 dependencies = [
-  "numpy",
+  "numpy >= 2",
   "pandas",
   "sacrebleu",
   "datasets",
@@ -33,6 +33,7 @@ dependencies = [
   "mecab-python3",
   "ipadic", # These last four dependencies are needed for the Japanese tokenizer.
   "spacy-udpipe", # This instead is needed for the UDPipe tokenizer (Czech).
+  "mt_metrics_eval @ git+https://github.com/google-research/mt-metrics-eval.git"
 ]
 classifiers = [
   # prevents upload to PyPi
@@ -40,6 +41,6 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/zouharvi/difficulty-sampling"
+Repository = "https://github.com/zouharvi/translation-difficulty-estimation"
 
 # pip install -e .
