@@ -1,5 +1,5 @@
 # Estimating Machine Translation Difficulty 
-[![EMNLP Paper](https://img.shields.io/badge/📜%20paper-481.svg)](https://arxiv.org/abs/2508.10175)
+[![EMNLP Paper](https://img.shields.io/badge/📜%20EMNLP%20paper-481.svg)](https://arxiv.org/abs/2508.10175)
 &nbsp;
 [![Models](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Collection-FCD21D)](https://huggingface.co/collections/Prosho/translation-difficulty-estimators-6816665c008e1d22426eb6c4)
 
