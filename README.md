@@ -76,4 +76,4 @@ If you use this work, please cite:
 ```
 
 
-<img src="misc/poster.svg" width="900vw">
+<img src="misc/poster_nofont.svg" width="1000vw">
